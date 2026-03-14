@@ -218,7 +218,7 @@
                 const provider = PROVIDERS[key];
                 const deal = CURRENT_DEALS[key];
                 const perSqft = (price / size).toFixed(2);
-                const monthly = (price * 52 / 12).toFixed(2);
+                const fourWeekly = (price * 4).toFixed(2);
 
                 let effectiveWeekly = price;
                 if (deal && deal.active && deal.discountPct > 0) {
@@ -247,7 +247,7 @@
                     name: provider.name + (provider.isYou ? " (You)" : ""),
                     isYou: provider.isYou,
                     price,
-                    monthly,
+                    fourWeekly,
                     perSqft,
                     deal: deal && deal.active ? deal.text : "—",
                     dealActive: deal && deal.active,
@@ -263,7 +263,7 @@
             <tr class="${r.isYou ? "is-you" : ""}">
                 <td>${r.name}</td>
                 <td>${formatGBP(r.price)}</td>
-                <td>${formatGBP(r.monthly)}</td>
+                <td>${formatGBP(r.fourWeekly)}</td>
                 <td>${formatGBP(r.perSqft)}</td>
                 <td>${r.dealActive ? `<span class="deal-badge">${r.deal}</span>` : r.deal}</td>
                 <td>${r.effectiveWeekly}/wk</td>
