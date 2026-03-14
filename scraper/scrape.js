@@ -344,8 +344,12 @@ async function scrapeDailyDeals(context) {
     for (const [provider, url] of Object.entries(sites)) {
         try {
             const page = await context.newPage();
-            await page.goto(url, { waitUntil: "domcontentloaded", timeout: 30000 });
-            await page.waitForTimeout(5000);
+            const timeout = provider === "bigyellow" ? 60000 : 30000;
+            await page.goto(url, { waitUntil: "domcontentloaded", timeout });
+
+            // Big Yellow needs extra time for Incapsula JS challenge
+            const waitTime = provider === "bigyellow" ? 15000 : 5000;
+            await page.waitForTimeout(waitTime);
 
             // Accept cookies
             await tryClick(page, ['#onetrust-accept-btn-handler', 'text=/accept.*cookie/i', 'text=/accept.*all/i', 'text=/agree/i']);
@@ -483,34 +487,149 @@ async function submitQuoteForms(context, email, identity) {
         console.log(`  Safestore error: ${err.message}`);
     }
 
-    // Big Yellow - quote form
+    // Big Yellow - uses Imperva Incapsula bot protection
+    // Strategy: go to quote estimate page, wait for JS challenge to resolve,
+    // then navigate the room selection flow to see prices
     try {
-        console.log("\n  >> Big Yellow");
+        console.log("\n  >> Big Yellow (Incapsula-protected)");
+        prices.bigyellow = {};
         const page = await context.newPage();
         const apiData = [];
         interceptAll(page, apiData);
 
-        await page.goto("https://www.bigyellow.co.uk/kings-cross-self-storage-units", { waitUntil: "domcontentloaded", timeout: 45000 });
-        await page.waitForTimeout(8000);
-        await tryClick(page, ['#onetrust-accept-btn-handler', 'text=/accept.*cookie/i', 'text=/agree/i']);
+        // Step 1: Hit the store page first to get past Incapsula challenge
+        console.log("    Step 1: Loading store page (waiting for Incapsula)...");
+        await page.goto("https://www.bigyellow.co.uk/kings-cross-self-storage-units", {
+            waitUntil: "domcontentloaded", timeout: 60000
+        });
+        // Wait longer for Incapsula JS challenge to complete
+        await page.waitForTimeout(15000);
+
+        // Check if we got past Incapsula
+        const pageTitle = await page.title();
+        const bodyText = await page.evaluate(() => document.body?.innerText || "");
+        console.log(`    Page title: ${pageTitle}`);
+
+        if (bodyText.includes("Pardon Our Interruption") || bodyText.includes("Incapsula")) {
+            console.log("    Still blocked by Incapsula - waiting longer...");
+            await page.waitForTimeout(15000);
+        }
+
+        // Accept cookies if we got through
+        await tryClick(page, ['#onetrust-accept-btn-handler', 'text=/accept.*cookie/i', 'text=/agree/i', 'text=/got it/i']);
         await page.waitForTimeout(2000);
 
-        await tryClick(page, ['text=/get.*quote/i', 'text=/see.*room/i', 'text=/check.*price/i', 'a[href*="quote"]']);
-        await page.waitForTimeout(5000);
+        // Step 2: Navigate to the quote estimate page for Kings Cross
+        console.log("    Step 2: Navigating to quote estimate page...");
+        await page.goto("https://www.bigyellow.co.uk/quote/estimate/store/kings-cross/", {
+            waitUntil: "domcontentloaded", timeout: 60000
+        });
+        await page.waitForTimeout(10000);
 
-        await tryFill(page, 'input[name*="name"], input[name*="first"]', identity.firstName);
-        await tryFill(page, 'input[name*="email"], input[type="email"]', email);
-        await tryFill(page, 'input[name*="phone"], input[name*="tel"]', identity.phone);
-        await tryClick(page, ['button[type="submit"]', 'text=/submit/i', 'text=/get.*quote/i']);
-        await page.waitForTimeout(5000);
+        // Screenshot the quote page
+        await screenshot(page, "bigyellow-quote");
 
-        const text = await page.evaluate(() => document.body?.innerText || "");
-        prices.bigyellow = extractPricesFromText(text);
-        for (const { body } of apiData) {
-            if (body.startsWith("{") || body.startsWith("[")) {
-                try { Object.assign(prices.bigyellow || (prices.bigyellow = {}), extractPricesFromJSON(JSON.parse(body))); } catch {}
+        const quoteText = await page.evaluate(() => document.body?.innerText || "");
+        console.log(`    Quote page length: ${quoteText.length} chars`);
+
+        // Extract any visible prices
+        const visiblePrices = extractPricesFromText(quoteText);
+        if (Object.keys(visiblePrices).length > 0) {
+            console.log(`    Visible prices: ${JSON.stringify(visiblePrices)}`);
+            Object.assign(prices.bigyellow, visiblePrices);
+        }
+
+        // Step 3: Try to interact with room selection
+        // Big Yellow quote flow: select room size -> see price -> enter details
+        console.log("    Step 3: Trying room size selection...");
+
+        // Look for room/size selection elements
+        for (const size of TARGET_SIZES) {
+            const clicked = await tryClick(page, [
+                `text="${size} sq ft"`, `text="${size}sq ft"`, `text="${size} sqft"`,
+                `[data-size="${size}"]`, `[data-sqft="${size}"]`, `[data-area="${size}"]`,
+                `text="${size}"`,
+            ]);
+            if (clicked) {
+                console.log(`    Clicked size ${size}`);
+                await page.waitForTimeout(3000);
             }
         }
+
+        // Try dropdown/slider for size
+        await trySelect(page, 'select[name*="size"], select[name*="room"], select[name*="area"]', '50');
+        await page.waitForTimeout(3000);
+
+        // Try filling in move-in date and duration (might unlock price display)
+        await tryFill(page, 'input[name*="date"], input[type="date"]', '2026-04-01');
+        await trySelect(page, 'select[name*="duration"], select[name*="length"], select[name*="period"]', '4');
+        await tryClick(page, [
+            'text=/see.*price/i', 'text=/get.*price/i', 'text=/calculate/i',
+            'text=/next/i', 'text=/continue/i', 'text=/show.*room/i',
+            'button[type="submit"]'
+        ]);
+        await page.waitForTimeout(5000);
+
+        // Check for prices after interaction
+        const afterText = await page.evaluate(() => document.body?.innerText || "");
+        const afterPrices = extractPricesFromText(afterText);
+        if (Object.keys(afterPrices).length > 0) {
+            console.log(`    Prices after interaction: ${JSON.stringify(afterPrices)}`);
+            Object.assign(prices.bigyellow, afterPrices);
+        }
+
+        // Also scan for any price-like patterns (£XX.XX per week)
+        const allPriceMatches = await page.evaluate(() => {
+            const text = document.body?.innerText || "";
+            const matches = [];
+            const re = /£\s*(\d+(?:\.\d{1,2})?)\s*(?:per\s+week|\/\s*w(?:ee)?k|pw|p\.w\.?|weekly)/gi;
+            let m;
+            while ((m = re.exec(text)) !== null) {
+                matches.push({ price: parseFloat(m[1]), context: text.substring(Math.max(0, m.index - 50), m.index + m[0].length + 50) });
+            }
+            return matches;
+        });
+        if (allPriceMatches.length > 0) {
+            console.log(`    Found ${allPriceMatches.length} price mentions:`);
+            allPriceMatches.forEach(m => console.log(`      £${m.price}/wk - "${m.context.trim()}"`));
+        }
+
+        // Step 4: Fill quote form if visible (for email response)
+        console.log("    Step 4: Submitting quote form for email...");
+        await tryFill(page, 'input[name*="name"], input[name*="first"], input[name*="Name"]', identity.firstName);
+        await tryFill(page, 'input[name*="last"], input[name*="Last"], input[name*="surname"]', identity.lastName);
+        await tryFill(page, 'input[name*="email"], input[name*="Email"], input[type="email"]', email);
+        await tryFill(page, 'input[name*="phone"], input[name*="Phone"], input[name*="tel"], input[type="tel"]', identity.phone);
+        await tryClick(page, [
+            'text=/get.*quote/i', 'text=/submit/i', 'text=/request/i',
+            'text=/send/i', 'button[type="submit"]'
+        ]);
+        await page.waitForTimeout(5000);
+
+        // Check intercepted API calls for pricing data
+        let jsonCount = 0;
+        for (const { url, body } of apiData) {
+            if (body.startsWith("{") || body.startsWith("[")) {
+                jsonCount++;
+                try {
+                    const json = JSON.parse(body);
+                    const apiPrices = extractPricesFromJSON(json);
+                    if (Object.keys(apiPrices).length > 0) {
+                        console.log(`    API prices from ${url.substring(0, 80)}: ${JSON.stringify(apiPrices)}`);
+                        Object.assign(prices.bigyellow, apiPrices);
+                    }
+                    // Log any response containing price-related keywords
+                    const jsonStr = JSON.stringify(json);
+                    if (jsonStr.includes("price") || jsonStr.includes("rate") || jsonStr.includes("weekly")) {
+                        console.log(`    API with pricing keywords: ${url.substring(0, 100)}`);
+                        console.log(`    Preview: ${jsonStr.substring(0, 300)}`);
+                    }
+                } catch {}
+            }
+        }
+        console.log(`    Total JSON API calls intercepted: ${jsonCount}/${apiData.length}`);
+
+        await screenshot(page, "bigyellow-final");
         await page.close();
     } catch (err) {
         console.log(`  Big Yellow error: ${err.message}`);
@@ -532,12 +651,23 @@ async function main() {
     const today = new Date().toISOString().split("T")[0];
     const identity = getWeeklyIdentity();
 
-    const browser = await chromium.launch({ headless: true });
+    const browser = await chromium.launch({
+        headless: true,
+        args: [
+            "--disable-blink-features=AutomationControlled",
+            "--no-sandbox"
+        ]
+    });
     const context = await browser.newContext({
-        userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+        userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
         viewport: { width: 1920, height: 1080 },
         locale: "en-GB",
         timezoneId: "Europe/London"
+    });
+
+    // Remove navigator.webdriver flag (helps bypass Incapsula/bot detection)
+    await context.addInitScript(() => {
+        Object.defineProperty(navigator, "webdriver", { get: () => false });
     });
 
     // --- DAILY: Aggregator prices ---

@@ -152,13 +152,9 @@
             </div>
         </section>
 
-        <!-- Scrape Status -->
+        <!-- Data Sources -->
         <section class="card">
-            <h2>Data Source Status</h2>
-            <p style="color:var(--text-muted); font-size:13px; margin-bottom:16px">
-                Shows whether automated scraping is successfully pulling prices for each provider.
-                Red = scraper can't get prices (use manual entry). Green = automated.
-            </p>
+            <h2>Data Sources</h2>
             <div class="table-wrapper">
                 <table id="status-table">
                     <thead>
@@ -166,13 +162,21 @@
                             <th>Provider</th>
                             <th>Status</th>
                             <th>Prices Found</th>
-                            <th>Last Successful Scrape</th>
-                            <th>Notes</th>
+                            <th>Last Updated</th>
+                            <th>Source</th>
                         </tr>
                     </thead>
                     <tbody id="status-table-body">
                     </tbody>
                 </table>
+            </div>
+            <div style="margin-top:16px; padding:12px; background:var(--surface2); border-radius:var(--radius-sm); font-size:12px; color:var(--text-muted); line-height:1.6">
+                <strong style="color:var(--text)">How pricing data is collected:</strong><br>
+                <span style="color:var(--green)">&#9679;</span> <strong>Metro Storage</strong> — Internal price sheet (direct)<br>
+                <span style="color:var(--green)">&#9679;</span> <strong>Access, Urban Locker, Safestore</strong> — StorageLocator.co.uk aggregator (25/50/100 sqft confirmed; 75/150 sqft interpolated)<br>
+                <span style="color:var(--amber)">&#9679;</span> <strong>Big Yellow</strong> — Estimated from nearby branch data + search snippets (site uses Imperva bot protection)<br>
+                <span style="color:var(--blue)">&#9679;</span> <strong>Deals</strong> — Scraped daily from competitor homepages<br>
+                <span style="color:var(--blue)">&#9679;</span> <strong>Quote emails</strong> — Forms submitted weekly (Mondays) with rotating identities; inbox checked 1hr + 3hrs after
             </div>
         </section>
 
@@ -214,7 +218,8 @@
         </section>
 
         <footer>
-            <p>Storage Monitor &mdash; Islington Competitive Intelligence &mdash; Data refreshes daily via automated scraper</p>
+            <p>Storage Monitor &mdash; Islington Competitive Intelligence<br>
+            Deals scraped daily &middot; Quote forms submitted weekly (Mon) &middot; Prices via StorageLocator + email quotes</p>
         </footer>
     </div>
 
