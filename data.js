@@ -49,11 +49,12 @@ const PROVIDERS = {
 
 // Current prices per week in GBP, keyed by provider then size (sqft)
 // Last updated: 2026-03-14
-// Sources: Metro = internal price sheet (Feb 2026)
-//          Access, Urban Locker = StorageLocator.co.uk (indicative, cached)
-//          Safestore = StorageLocator.co.uk (indicative, cached)
-//          Big Yellow = Direct quote flow (all 5 sizes confirmed, Kings Cross)
-//          75 & 150 sqft interpolated for Access/Urban/Safestore where not directly available
+// Sources: All prices confirmed via direct quote flows
+//          Metro = internal price sheet (Feb 2026)
+//          Access = direct quote flow (all 5 sizes confirmed)
+//          Urban Locker = direct quote flow (all sizes from single quote)
+//          Safestore = direct quote flow (online price, reCAPTCHA v3 bypassed)
+//          Big Yellow = direct quote flow (ongoing rate with current discount)
 const CURRENT_PRICES = {
     "metro": {
         "25": 46.75,
@@ -63,25 +64,25 @@ const CURRENT_PRICES = {
         "150": 188.75
     },
     "access": {
-        "25": 35.77,
-        "50": 61.15,
-        "75": 80.00,
-        "100": 101.54,
-        "150": 138.00
+        "25": 45.46,
+        "50": 66.23,
+        "75": 112.38,
+        "100": 132.92,
+        "150": 223.85
     },
     "urban": {
-        "25": 37.66,
-        "50": 61.72,
-        "75": 78.50,
+        "25": 45.19,
+        "50": 61.73,
+        "75": 76.60,
         "100": 97.72,
-        "150": 133.00
+        "150": 210.67
     },
     "safestore": {
-        "25": 50.99,
-        "50": 75.49,
-        "75": 106.00,
-        "100": 138.99,
-        "150": 195.00
+        "25": 51.49,
+        "50": 91.99,
+        "75": 125.49,
+        "100": 120.49,
+        "150": 258.99
     },
     "bigyellow": {
         "25": 37.80,
@@ -104,7 +105,7 @@ const CURRENT_DEALS = {
     },
     "access": {
         "active": true,
-        "text": "50% off up to 13 weeks storage",
+        "text": "50% off first 13 weeks (25-75sqft) / 50% off first 4 weeks (100-150sqft)",
         "discountPct": 50,
         "maxWeeks": 13,
         "firstSeen": "2026-01-15",
@@ -114,13 +115,13 @@ const CURRENT_DEALS = {
         "active": true,
         "text": "50% off your first two months",
         "discountPct": 50,
-        "maxWeeks": 0,
+        "maxWeeks": 8,
         "firstSeen": "2026-03-14",
         "lastSeen": "2026-03-14"
     },
     "safestore": {
         "active": true,
-        "text": "50% off first 8 weeks for new customers",
+        "text": "50% off first 8 weeks or £1 for first month (varies by size)",
         "discountPct": 50,
         "maxWeeks": 8,
         "firstSeen": "2026-03-01",
@@ -128,7 +129,7 @@ const CURRENT_DEALS = {
     },
     "bigyellow": {
         "active": true,
-        "text": "50% off for first 8 weeks (standard rate £79.20/wk for 50sqft)",
+        "text": "50% off for first 8 weeks",
         "discountPct": 50,
         "maxWeeks": 8,
         "firstSeen": "2026-03-14",
@@ -549,25 +550,25 @@ const PRICE_HISTORY = [
                 "150": 188.75
             },
             "access": {
-                "25": 35.77,
-                "50": 61.15,
-                "75": 80.00,
-                "100": 101.54,
-                "150": 138.00
+                "25": 45.46,
+                "50": 66.23,
+                "75": 112.38,
+                "100": 132.92,
+                "150": 223.85
             },
             "urban": {
-                "25": 37.66,
-                "50": 61.72,
-                "75": 78.50,
+                "25": 45.19,
+                "50": 61.73,
+                "75": 76.60,
                 "100": 97.72,
-                "150": 133.00
+                "150": 210.67
             },
             "safestore": {
-                "25": 50.99,
-                "50": 75.49,
-                "75": 106.00,
-                "100": 138.99,
-                "150": 195.00
+                "25": 51.49,
+                "50": 91.99,
+                "75": 125.49,
+                "100": 120.49,
+                "150": 258.99
             },
             "bigyellow": {
                 "25": 37.80,
@@ -788,20 +789,20 @@ const SCRAPE_STATUS = {
     "access": {
         "status": "ok",
         "lastSuccess": "2026-03-14",
-        "pricesFound": 3,
-        "message": "Via StorageLocator (25/50/100 sqft confirmed, 75/150 interpolated)"
+        "pricesFound": 5,
+        "message": "Direct quote flow — all 5 sizes confirmed (Islington)"
     },
     "urban": {
         "status": "ok",
         "lastSuccess": "2026-03-14",
-        "pricesFound": 3,
-        "message": "Via StorageLocator (25/50/100 sqft confirmed, 75/150 interpolated)"
+        "pricesFound": 5,
+        "message": "Direct quote flow — all sizes from single quote (Islington)"
     },
     "safestore": {
         "status": "ok",
         "lastSuccess": "2026-03-14",
-        "pricesFound": 3,
-        "message": "Via StorageLocator (25/50/100 sqft confirmed, 75/150 interpolated)"
+        "pricesFound": 5,
+        "message": "Direct quote flow — online prices confirmed (Kings Cross, reCAPTCHA v3)"
     },
     "bigyellow": {
         "status": "ok",

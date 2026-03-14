@@ -173,8 +173,10 @@
             <div style="margin-top:16px; padding:12px; background:var(--surface2); border-radius:var(--radius-sm); font-size:12px; color:var(--text-muted); line-height:1.6">
                 <strong style="color:var(--text)">How pricing data is collected:</strong><br>
                 <span style="color:var(--green)">&#9679;</span> <strong>Metro Storage</strong> — Internal price sheet (direct)<br>
-                <span style="color:var(--green)">&#9679;</span> <strong>Access, Urban Locker, Safestore</strong> — StorageLocator.co.uk aggregator (25/50/100 sqft confirmed; 75/150 sqft interpolated)<br>
-                <span style="color:var(--green)">&#9679;</span> <strong>Big Yellow</strong> — Direct from Kings Cross quote flow (all 5 sizes, scraped daily)<br>
+                <span style="color:var(--green)">&#9679;</span> <strong>Access</strong> — Direct quote flow, all 5 sizes (weekly, Vue slider automation)<br>
+                <span style="color:var(--green)">&#9679;</span> <strong>Urban Locker</strong> — Direct quote flow, all sizes from single quote (weekly)<br>
+                <span style="color:var(--green)">&#9679;</span> <strong>Safestore</strong> — Direct quote flow, online prices (weekly, reCAPTCHA v3 bypass)<br>
+                <span style="color:var(--green)">&#9679;</span> <strong>Big Yellow</strong> — Direct quote flow, all 5 sizes (daily, Incapsula bypass)<br>
                 <span style="color:var(--blue)">&#9679;</span> <strong>Deals</strong> — Scraped daily from competitor homepages<br>
                 <span style="color:var(--blue)">&#9679;</span> <strong>Quote emails</strong> — Forms submitted weekly (Mondays) with rotating identities; inbox checked 1hr + 3hrs after
             </div>

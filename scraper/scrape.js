@@ -543,105 +543,288 @@ async function submitQuoteForms(context, email, identity, browser) {
     console.log(`  Email: ${email}`);
     const prices = {};
 
-    // Access Self Storage - RapidStor widget
+    // ============================================================
+    // ACCESS SELF STORAGE - Vue.js slider quote flow
+    // Flow: Load widget -> set slider to size -> fill details -> get quote
+    // Slider has 18 stops (indices 0-17), target sizes at known positions
+    // ============================================================
     try {
-        console.log("\n  >> Access Self Storage");
-        const page = await context.newPage();
-        const apiData = [];
-        interceptAll(page, apiData);
+        console.log("\n  >> Access Self Storage (slider quote flow)");
+        prices.access = {};
+        const sliderMap = { 25: 23.5, 50: 35.3, 75: 41.2, 100: 47.1, 150: 58.8 }; // size -> slider %
 
-        await page.goto("https://www.accessstorage.com/storage?storeid=26", { waitUntil: "domcontentloaded", timeout: 30000 });
-        await page.waitForTimeout(5000);
-        await tryClick(page, ['text=/accept.*cookie/i', 'text=/accept.*all/i', '#cookie-accept']);
-        await page.waitForTimeout(2000);
+        for (const size of TARGET_SIZES) {
+            const pct = sliderMap[size];
+            if (!pct) continue;
 
-        await tryFill(page, 'input[name*="name"], input[name*="first"]', identity.firstName);
-        await tryFill(page, 'input[name*="last"], input[name*="surname"]', identity.lastName);
-        await tryFill(page, 'input[name*="email"], input[type="email"]', email);
-        await tryFill(page, 'input[name*="phone"], input[name*="tel"], input[type="tel"]', identity.phone);
-        await tryClick(page, ['text=/get.*quote/i', 'text=/submit/i', 'text=/next/i', 'button[type="submit"]']);
-        await page.waitForTimeout(5000);
+            const ctx = await browser.newContext({
+                userAgent: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+                viewport: { width: 1920, height: 1080 }, locale: "en-GB", timezoneId: "Europe/London"
+            });
+            await ctx.addInitScript(() => { Object.defineProperty(navigator, "webdriver", { get: () => false }); });
+            const page = await ctx.newPage();
 
-        const text = await page.evaluate(() => document.body?.innerText || "");
-        prices.access = extractPricesFromText(text);
-        for (const { body } of apiData) {
-            try { Object.assign(prices.access || (prices.access = {}), extractPricesFromJSON(JSON.parse(body))); } catch {}
+            try {
+                await page.goto("https://www.accessstorage.com/storage?storeid=26", { waitUntil: "domcontentloaded", timeout: 60000 });
+                await page.waitForTimeout(7000);
+                await page.click('.cky-btn-accept', { timeout: 3000 }).catch(() => {});
+                await page.waitForTimeout(1000);
+
+                // Click slider at target position
+                const rail = await page.$('.vue-slider');
+                if (rail) {
+                    const box = await rail.boundingBox();
+                    if (box) await page.mouse.click(box.x + (box.width * pct / 100), box.y + box.height / 2);
+                }
+                await page.waitForTimeout(1000);
+
+                // Click Continue
+                await page.click('.size-selector__submit-cta', { timeout: 5000 }).catch(async () => {
+                    await page.evaluate(() => {
+                        for (const b of document.querySelectorAll("button, a")) {
+                            if (/^continue$/i.test((b.innerText || "").trim())) { b.click(); return; }
+                        }
+                    });
+                });
+                await page.waitForTimeout(5000);
+
+                // Fill contact details
+                await page.fill('#CustomerDetailsViewModel_FirstName', identity.firstName).catch(() => {});
+                await page.fill('#CustomerDetailsViewModel_LastName', identity.lastName).catch(() => {});
+                await page.fill('#CustomerDetailsViewModel_Phone', identity.phone).catch(() => {});
+                await page.fill('#CustomerDetailsViewModel_Email', email).catch(() => {});
+                await page.selectOption('#StorageReasonsViewModel_StorageReason', { label: 'Moving home' }).catch(() => {});
+                await page.waitForTimeout(1000);
+
+                // Submit
+                await page.evaluate(() => {
+                    for (const b of document.querySelectorAll("button, a, input[type='submit']")) {
+                        if (/submit\s*details/i.test((b.innerText || b.value || "").trim())) { b.click(); return; }
+                    }
+                });
+                await page.waitForTimeout(10000);
+
+                // Extract prices from quote page
+                const text = await page.evaluate(() => document.body?.innerText || "");
+                const discMatch = text.match(/£([\d,.]+)\s*\/?\s*week/i);
+                const stdMatch = text.match(/then\s*£([\d,.]+)\s*per\s*week/i);
+                if (stdMatch) prices.access[size] = parseFloat(stdMatch[1].replace(',', ''));
+                else if (discMatch) prices.access[size] = parseFloat(discMatch[1].replace(',', ''));
+                console.log(`    ${size}sqft: standard=${stdMatch ? '£' + stdMatch[1] : '?'}, discounted=${discMatch ? '£' + discMatch[1] : '?'}`);
+
+                await screenshot(page, `access-${size}`);
+            } catch (err) {
+                console.log(`    ${size}sqft ERROR: ${err.message}`);
+            }
+            await ctx.close();
+            await new Promise(r => setTimeout(r, 3000));
         }
-        console.log(`  Intercepted ${apiData.length} API calls`);
-        await page.close();
     } catch (err) {
         console.log(`  Access error: ${err.message}`);
     }
 
-    // Urban Locker - per-size quote pages
+    // ============================================================
+    // URBAN LOCKER - Single quote form returns ALL sizes
+    // Submit once for 50sqft, results page shows every available size
+    // IMPORTANT: @example.com rejected, must use @gmail.com
+    // ============================================================
     try {
-        console.log("\n  >> Urban Locker");
+        console.log("\n  >> Urban Locker (single quote, all sizes)");
         prices.urban = {};
-        for (const size of TARGET_SIZES) {
-            const page = await context.newPage();
-            const apiData = [];
-            interceptAll(page, apiData);
+        const ctx = await browser.newContext({
+            userAgent: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+            viewport: { width: 1920, height: 1080 }, locale: "en-GB", timezoneId: "Europe/London"
+        });
+        await ctx.addInitScript(() => { Object.defineProperty(navigator, "webdriver", { get: () => false }); });
+        const page = await ctx.newPage();
 
-            const url = `https://quote.urbanlocker.co.uk/storage/urban-locker-islington/${size}`;
-            try {
-                await page.goto(url, { waitUntil: "domcontentloaded", timeout: 20000 });
-                await page.waitForTimeout(4000);
+        try {
+            await page.goto("https://quote.urbanlocker.co.uk/storage/urban-locker-islington/50", { waitUntil: "load", timeout: 60000 });
+            await page.waitForTimeout(3000);
 
-                await trySelect(page, 'select[name*="title"]', 'Mr');
-                await tryFill(page, 'input[name*="first"], input[name*="First"]', identity.firstName);
-                await tryFill(page, 'input[name*="last"], input[name*="Last"], input[name*="surname"]', identity.lastName);
-                await tryFill(page, 'input[name*="email"], input[name*="Email"], input[type="email"]', email);
-                await tryFill(page, 'input[name*="phone"], input[name*="Phone"], input[name*="tel"]', identity.phone);
+            // Use @gmail.com (example.com gets rejected)
+            const ulEmail = `${identity.firstName.toLowerCase()}.${identity.lastName.toLowerCase()}.${Date.now()}@gmail.com`;
 
-                await tryClick(page, ['text=/get.*quote/i', 'text=/submit/i', 'text=/request/i', 'button[type="submit"]', 'input[type="submit"]']);
-                await page.waitForTimeout(8000);
+            await page.selectOption("#title", "Mr").catch(() => {});
+            await page.fill("#firstname", identity.firstName).catch(() => {});
+            await page.fill("#surname", identity.lastName).catch(() => {});
+            await page.fill("#email", ulEmail).catch(() => {});
+            await page.fill("#phone", identity.phone).catch(() => {});
+            await page.selectOption("#smq_C_XXX", "GGL").catch(() => {}); // Referral: Google
+            const futureDate = new Date(Date.now() + 14 * 86400000).toISOString().split("T")[0];
+            await page.fill("#smq_C_DAT", futureDate).catch(() => {}); // Move date
+            await page.selectOption("#smq_C_DOM", "MOVE").catch(() => {}); // Purpose: Moving
+            await page.fill("#smq_C_PSC", "N1 8QZ").catch(() => {});
+            await page.waitForTimeout(1000);
 
-                const responseText = await page.evaluate(() => document.body?.innerText || "");
-                const found = extractPricesFromText(responseText);
-                if (found[size]) prices.urban[size] = found[size];
+            // Submit form
+            await Promise.all([
+                page.waitForNavigation({ waitUntil: "load", timeout: 30000 }),
+                page.click('button[type="submit"]')
+            ]);
+            await page.waitForTimeout(5000);
 
-                for (const { body } of apiData) {
-                    try { Object.assign(prices.urban, extractPricesFromJSON(JSON.parse(body))); } catch {}
+            // Parse ALL prices from results (primary + alternatives)
+            const text = await page.evaluate(() => document.body?.innerText || "");
+            const lines = text.split("\n").map(l => l.trim()).filter(Boolean);
+
+            for (let i = 0; i < lines.length; i++) {
+                // Primary: "£XX.XX Inc VAT" followed by "STANDARD WEEKLY RATE"
+                if (lines[i + 1] && lines[i + 1].includes("STANDARD WEEKLY RATE")) {
+                    const m = lines[i].match(/£([\d,.]+)/);
+                    if (m) {
+                        const sizeMatch = text.match(/quote for (\d+) sq ft/i);
+                        if (sizeMatch) prices.urban[parseInt(sizeMatch[1])] = parseFloat(m[1].replace(",", ""));
+                    }
                 }
-            } catch (err) {
-                console.log(`    ${size}sqft error: ${err.message}`);
+                // Alternatives: "XX sq ft room" then "Standard rate: £XX.XX per week"
+                const sizeMatch = lines[i].match(/^(\d+) sq ft room$/);
+                if (sizeMatch) {
+                    for (let j = i + 1; j < Math.min(i + 5, lines.length); j++) {
+                        const sMatch = lines[j].match(/Standard rate:\s*£([\d,.]+)/i);
+                        if (sMatch) { prices.urban[parseInt(sizeMatch[1])] = parseFloat(sMatch[1].replace(",", "")); break; }
+                    }
+                }
             }
-            await page.close();
+
+            console.log(`    Urban Locker prices: ${JSON.stringify(prices.urban)}`);
+            await screenshot(page, "urbanlocker-quote");
+        } catch (err) {
+            console.log(`    Urban Locker error: ${err.message}`);
         }
+        await ctx.close();
     } catch (err) {
         console.log(`  Urban Locker error: ${err.message}`);
     }
 
-    // Safestore - quote form
+    // ============================================================
+    // SAFESTORE - 5-step quote wizard with reCAPTCHA v3
+    // URL params pre-select Personal type + size + Kings Cross store
+    // Steps: Duration -> When -> Details -> Your Quote
+    // reCAPTCHA v3 may fail — retry up to 3 times with mouse movement
+    // ============================================================
     try {
-        console.log("\n  >> Safestore");
-        const page = await context.newPage();
-        const apiData = [];
-        interceptAll(page, apiData);
+        console.log("\n  >> Safestore (quote wizard + reCAPTCHA v3)");
+        prices.safestore = {};
+        const SS_SITE_ID = "080XSXZZ150220050002"; // Kings Cross
 
-        await page.goto("https://www.safestore.co.uk/self-storage/london/north/kings-cross/", { waitUntil: "domcontentloaded", timeout: 45000 });
-        await page.waitForTimeout(8000);
-        await tryClick(page, ['#onetrust-accept-btn-handler', 'text=/accept.*cookie/i']);
-        await page.waitForTimeout(2000);
+        for (const size of TARGET_SIZES) {
+            const ctx = await browser.newContext({
+                userAgent: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+                viewport: { width: 1920, height: 1080 }, locale: "en-GB", timezoneId: "Europe/London"
+            });
+            await ctx.addInitScript(() => { Object.defineProperty(navigator, "webdriver", { get: () => false }); });
+            const page = await ctx.newPage();
 
-        await tryClick(page, ['text=/get.*quote/i', 'text=/see.*price/i', 'text=/check.*availability/i', 'a[href*="quote"]']);
-        await page.waitForTimeout(5000);
+            try {
+                // Load wizard at Duration step (step=3, type + size pre-selected)
+                await page.goto(`https://www.safestore.co.uk/get-a-quote/?fromsizewidget=1&size=${size}&step=3&customertype=2&segment=other&siteid=${SS_SITE_ID}&returnurl=/self-storage/london/north/kings-cross/`, {
+                    waitUntil: "domcontentloaded", timeout: 60000
+                });
+                await page.waitForTimeout(5000);
+                // Cookie consent
+                const ot = await page.$('#onetrust-accept-btn-handler');
+                if (ot) await ot.click().catch(() => {});
+                await page.waitForTimeout(1000);
 
-        await tryFill(page, 'input[name*="name"], input[name*="first"]', identity.firstName);
-        await tryFill(page, 'input[name*="last"], input[name*="surname"]', identity.lastName);
-        await tryFill(page, 'input[name*="email"], input[type="email"]', email);
-        await tryFill(page, 'input[name*="phone"], input[name*="tel"]', identity.phone);
-        await tryClick(page, ['button[type="submit"]', 'text=/submit/i', 'text=/get.*quote/i']);
-        await page.waitForTimeout(5000);
+                // Duration: 4 weeks
+                await page.evaluate(() => { document.getElementById("radio-30-quote")?.labels?.[0]?.click(); });
+                await page.waitForTimeout(1500);
+                // Click visible Next
+                await page.evaluate(() => {
+                    for (const btn of document.querySelectorAll("button.c-btn")) {
+                        if (btn.innerText.trim() === "Next" && btn.offsetParent !== null) { btn.click(); return; }
+                    }
+                });
+                await page.waitForTimeout(2000);
 
-        const text = await page.evaluate(() => document.body?.innerText || "");
-        prices.safestore = extractPricesFromText(text);
-        for (const { body } of apiData) {
-            if (body.startsWith("{") || body.startsWith("[")) {
-                try { Object.assign(prices.safestore || (prices.safestore = {}), extractPricesFromJSON(JSON.parse(body))); } catch {}
+                // When: Within 1 week
+                await page.evaluate(() => { document.getElementById("radio-7-lead")?.labels?.[0]?.click(); });
+                await page.waitForTimeout(1500);
+                await page.evaluate(() => {
+                    for (const btn of document.querySelectorAll("button.c-btn")) {
+                        if (btn.innerText.trim() === "Next" && btn.offsetParent !== null) { btn.click(); return; }
+                    }
+                });
+                await page.waitForTimeout(2000);
+
+                // Personal details
+                await page.fill("#inputFirstName", identity.firstName).catch(() => {});
+                await page.fill("#inputSurname", identity.lastName).catch(() => {});
+                await page.fill("#inputEmail", email).catch(() => {});
+                await page.fill("#inputContactNumber", identity.phone).catch(() => {});
+                await page.fill("#inputPostcode", "N1 8QZ").catch(() => {});
+                await page.waitForTimeout(2000);
+
+                // Mouse movement for reCAPTCHA v3 scoring
+                for (let i = 0; i < 8; i++) {
+                    await page.mouse.move(200 + Math.random() * 800, 200 + Math.random() * 400, { steps: 5 });
+                    await page.waitForTimeout(300 + Math.random() * 500);
+                }
+                await page.waitForTimeout(2000);
+
+                // reCAPTCHA + submit (up to 3 retries)
+                let submitOk = false;
+                for (let attempt = 1; attempt <= 3 && !submitOk; attempt++) {
+                    // Get reCAPTCHA token
+                    await page.evaluate(async () => {
+                        try {
+                            const key = document.getElementById("recaptcha-site-key")?.value;
+                            if (key && typeof grecaptcha !== "undefined") {
+                                const token = await grecaptcha.execute(key, { action: "EnquiryWizard" });
+                                if (token) document.getElementById("RecaptchaToken").value = token;
+                            }
+                        } catch {}
+                    });
+                    await page.waitForTimeout(1000);
+
+                    // Click "Your Quote" button
+                    const resp = page.waitForResponse(r => r.url().includes("personaldetailsstep"), { timeout: 20000 }).catch(() => null);
+                    await page.evaluate(() => {
+                        for (const btn of document.querySelectorAll("button.c-btn")) {
+                            if (btn.offsetParent !== null && /your quote/i.test(btn.innerText)) { btn.click(); return; }
+                        }
+                    });
+                    const r = await resp;
+                    if (r && r.status() === 200) { submitOk = true; break; }
+                    console.log(`    ${size}sqft: reCAPTCHA attempt ${attempt} failed, retrying...`);
+                    await page.waitForTimeout(attempt * 5000);
+                    for (let i = 0; i < 4; i++) {
+                        await page.mouse.move(200 + Math.random() * 800, 200 + Math.random() * 400, { steps: 3 });
+                        await page.waitForTimeout(1000);
+                    }
+                }
+
+                if (submitOk) {
+                    try { await page.waitForURL(/storage-quote/, { timeout: 15000 }); } catch {}
+                    await page.waitForTimeout(3000);
+
+                    // Extract online price from quote page
+                    const onlinePrice = await page.evaluate(() => {
+                        const els = document.querySelectorAll(".c-storage-quote__buy-price");
+                        for (const el of els) {
+                            if (/online/i.test(el.innerText)) {
+                                const m = el.innerText.match(/£([\d,.]+)/);
+                                if (m) return parseFloat(m[1].replace(",", ""));
+                            }
+                        }
+                        return null;
+                    });
+                    if (onlinePrice) {
+                        prices.safestore[size] = onlinePrice;
+                        console.log(`    ${size}sqft: £${onlinePrice}/wk (online price)`);
+                    }
+                } else {
+                    console.log(`    ${size}sqft: reCAPTCHA blocked all attempts`);
+                }
+
+                await screenshot(page, `safestore-${size}`);
+            } catch (err) {
+                console.log(`    ${size}sqft ERROR: ${err.message}`);
             }
+            await ctx.close();
+            await new Promise(r => setTimeout(r, 5000)); // Longer pause for Safestore
         }
-        await page.close();
     } catch (err) {
         console.log(`  Safestore error: ${err.message}`);
     }
