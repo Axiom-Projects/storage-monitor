@@ -1,0 +1,12 @@
+{
+    "name": "storage-monitor-scraper",
+    "version": "1.0.0",
+    "private": true,
+    "description": "Scraper for storage unit competitor pricing",
+    "scripts": {
+        "scrape": "node scrape.js"
+    },
+    "dependencies": {
+        "playwright": "^1.42.0"
+    }
+}

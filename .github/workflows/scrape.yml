@@ -1,0 +1,44 @@
+name: Scrape Storage Prices
+
+on:
+  schedule:
+    # Run daily at 7am UK time (07:00 UTC in winter, 06:00 UTC in summer)
+    - cron: '0 7 * * *'
+  workflow_dispatch: # Allow manual trigger
+
+permissions:
+  contents: write
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: |
+          cd scraper
+          npm ci
+
+      - name: Install Playwright browsers
+        run: |
+          cd scraper
+          npx playwright install chromium --with-deps
+
+      - name: Run scraper
+        run: |
+          cd scraper
+          node scrape.js
+
+      - name: Commit and push changes
+        run: |
+          git config user.name "Storage Monitor Bot"
+          git config user.email "bot@storage-monitor.local"
+          git add data.js
+          git diff --staged --quiet || git commit -m "Update pricing data $(date +%Y-%m-%d)"
+          git push

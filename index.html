@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Storage Monitor - Islington</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- Password Gate -->
+    <div id="login-screen" class="login-screen">
+        <div class="login-box">
+            <div class="login-logo">
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#6366f1" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+            </div>
+            <h1>Storage Monitor</h1>
+            <p>Competitor intelligence dashboard</p>
+            <form id="login-form">
+                <input type="password" id="password-input" placeholder="Enter password" autocomplete="off" autofocus>
+                <button type="submit">Unlock</button>
+            </form>
+            <p id="login-error" class="login-error" style="display:none">Incorrect password</p>
+        </div>
+    </div>
+
+    <!-- Main Dashboard -->
+    <div id="dashboard" class="dashboard" style="display:none">
+        <header>
+            <div class="header-left">
+                <h1>Storage Monitor</h1>
+                <span class="location-badge">Islington, N1</span>
+            </div>
+            <div class="header-right">
+                <span id="last-updated" class="last-updated"></span>
+                <button id="logout-btn" class="btn-logout">Lock</button>
+            </div>
+        </header>
+
+        <!-- Alerts Banner -->
+        <div id="alerts-banner" class="alerts-banner" style="display:none">
+            <div class="alert-icon">!</div>
+            <div id="alerts-content" class="alerts-content"></div>
+        </div>
+
+        <!-- Summary Cards -->
+        <section class="summary-cards">
+            <div class="card summary-card" id="card-cheapest">
+                <div class="card-label">Your Position (50 sqft)</div>
+                <div class="card-value" id="your-position">—</div>
+                <div class="card-sub" id="your-position-detail"></div>
+            </div>
+            <div class="card summary-card" id="card-avg">
+                <div class="card-label">Market Avg (50 sqft/wk)</div>
+                <div class="card-value" id="market-avg">—</div>
+                <div class="card-sub" id="market-avg-detail"></div>
+            </div>
+            <div class="card summary-card" id="card-deals">
+                <div class="card-label">Active Competitor Deals</div>
+                <div class="card-value" id="active-deals">—</div>
+                <div class="card-sub" id="deals-detail"></div>
+            </div>
+            <div class="card summary-card" id="card-changes">
+                <div class="card-label">Price Changes (7d)</div>
+                <div class="card-value" id="recent-changes">—</div>
+                <div class="card-sub" id="changes-detail"></div>
+            </div>
+        </section>
+
+        <!-- Size Selector -->
+        <section class="controls">
+            <div class="size-selector">
+                <label>Unit Size:</label>
+                <div class="size-buttons" id="size-buttons">
+                    <button class="size-btn" data-size="25">25 sqft</button>
+                    <button class="size-btn active" data-size="50">50 sqft</button>
+                    <button class="size-btn" data-size="75">75 sqft</button>
+                    <button class="size-btn" data-size="100">100 sqft</button>
+                    <button class="size-btn" data-size="150">150 sqft</button>
+                </div>
+            </div>
+            <div class="time-selector">
+                <label>Period:</label>
+                <div class="size-buttons" id="time-buttons">
+                    <button class="size-btn" data-period="7">7d</button>
+                    <button class="size-btn active" data-period="30">30d</button>
+                    <button class="size-btn" data-period="90">90d</button>
+                    <button class="size-btn" data-period="all">All</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Price Comparison Table -->
+        <section class="card">
+            <h2>Current Price Comparison <span class="unit-label" id="table-size-label">(50 sqft)</span></h2>
+            <div class="table-wrapper">
+                <table id="price-table">
+                    <thead>
+                        <tr>
+                            <th>Provider</th>
+                            <th>Price/Week</th>
+                            <th>Price/Month</th>
+                            <th>Per Sqft/Wk</th>
+                            <th>Current Deal</th>
+                            <th>Effective Price</th>
+                            <th>vs You</th>
+                        </tr>
+                    </thead>
+                    <tbody id="price-table-body">
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- Charts -->
+        <section class="charts-grid">
+            <div class="card chart-card">
+                <h2>Price History <span class="unit-label" id="chart-size-label">(50 sqft/week)</span></h2>
+                <canvas id="price-chart"></canvas>
+            </div>
+            <div class="card chart-card">
+                <h2>Price Per Sqft Comparison</h2>
+                <canvas id="sqft-chart"></canvas>
+            </div>
+        </section>
+
+        <!-- Deals & Offers Timeline -->
+        <section class="card">
+            <h2>Deals & Offers Timeline</h2>
+            <div id="deals-timeline" class="deals-timeline">
+            </div>
+        </section>
+
+        <!-- Price Change Log -->
+        <section class="card">
+            <h2>Price Change Log</h2>
+            <div class="table-wrapper">
+                <table id="changelog-table">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Provider</th>
+                            <th>Size</th>
+                            <th>Old Price</th>
+                            <th>New Price</th>
+                            <th>Change</th>
+                        </tr>
+                    </thead>
+                    <tbody id="changelog-body">
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- Manual Price Entry -->
+        <section class="card">
+            <h2>Manual Price Update</h2>
+            <p style="color:var(--text-muted); font-size:13px; margin-bottom:16px">
+                For providers where automated scraping can't extract prices (e.g. Safestore, Big Yellow),
+                enter prices manually after getting a quote. Changes are saved to your browser and will
+                overlay the scraped data.
+            </p>
+            <div class="manual-entry">
+                <div style="display:flex; gap:12px; flex-wrap:wrap; align-items:end; margin-bottom:16px">
+                    <div>
+                        <label style="font-size:12px; color:var(--text-muted); display:block; margin-bottom:4px">Provider</label>
+                        <select id="manual-provider" style="background:var(--surface2); border:1px solid var(--border); color:var(--text); padding:8px 12px; border-radius:var(--radius-sm); font-size:14px">
+                        </select>
+                    </div>
+                    <div>
+                        <label style="font-size:12px; color:var(--text-muted); display:block; margin-bottom:4px">Size (sqft)</label>
+                        <select id="manual-size" style="background:var(--surface2); border:1px solid var(--border); color:var(--text); padding:8px 12px; border-radius:var(--radius-sm); font-size:14px">
+                            <option value="25">25 sqft</option>
+                            <option value="50" selected>50 sqft</option>
+                            <option value="75">75 sqft</option>
+                            <option value="100">100 sqft</option>
+                            <option value="150">150 sqft</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label style="font-size:12px; color:var(--text-muted); display:block; margin-bottom:4px">Price/week (GBP)</label>
+                        <input type="number" id="manual-price" step="0.01" min="0" placeholder="e.g. 55.00"
+                            style="background:var(--surface2); border:1px solid var(--border); color:var(--text); padding:8px 12px; border-radius:var(--radius-sm); font-size:14px; width:120px">
+                    </div>
+                    <button id="manual-save-btn" style="background:var(--primary); border:none; color:white; padding:8px 20px; border-radius:var(--radius-sm); cursor:pointer; font-size:14px; font-weight:600">Save</button>
+                    <button id="manual-clear-btn" style="background:var(--surface2); border:1px solid var(--border); color:var(--text-muted); padding:8px 16px; border-radius:var(--radius-sm); cursor:pointer; font-size:14px">Clear All Overrides</button>
+                </div>
+                <div id="manual-overrides" style="font-size:13px; color:var(--text-muted)"></div>
+            </div>
+        </section>
+
+        <footer>
+            <p>Storage Monitor &mdash; Islington Competitive Intelligence &mdash; Data refreshes daily via automated scraper</p>
+        </footer>
+    </div>
+
+    <script src="data.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
