@@ -89,6 +89,8 @@
         renderSqftChart();
         renderDealsTimeline();
         renderChangelog();
+        renderScrapeStatus();
+        renderOverridesList();
         updateSizeLabels();
     }
 
@@ -445,6 +447,58 @@
                     <td>${formatGBP(c.oldPrice)}</td>
                     <td>${formatGBP(c.newPrice)}</td>
                     <td class="${cls}">${arrow} ${formatGBP(Math.abs(diff))} (${pct > 0 ? "+" : ""}${pct}%)</td>
+                </tr>
+            `;
+        }).join("");
+    }
+
+    // --- Scrape Status ---
+    function renderScrapeStatus() {
+        const tbody = document.getElementById("status-table-body");
+        if (!tbody) return;
+        if (typeof SCRAPE_STATUS === "undefined") {
+            tbody.innerHTML = '<tr><td colspan="5" style="color:var(--text-muted)">No scrape status data yet - run the scraper first</td></tr>';
+            return;
+        }
+
+        const overrides = getOverrides();
+
+        tbody.innerHTML = Object.entries(PROVIDERS).map(([key, provider]) => {
+            const s = SCRAPE_STATUS[key] || { status: "unknown", lastSuccess: null, pricesFound: 0, message: "" };
+            const hasOverride = overrides[key] && Object.keys(overrides[key]).length > 0;
+
+            let statusBadge;
+            if (s.status === "ok") {
+                statusBadge = '<span style="color:var(--green); font-weight:700">Automated</span>';
+            } else if (s.status === "partial") {
+                statusBadge = '<span style="color:var(--amber); font-weight:700">Partial</span>';
+            } else if (s.status === "failed") {
+                statusBadge = '<span style="color:var(--red); font-weight:700">Failed</span>';
+            } else if (s.status === "sample") {
+                statusBadge = '<span style="color:var(--amber); font-weight:700">Sample Data</span>';
+            } else {
+                statusBadge = '<span style="color:var(--text-muted)">Unknown</span>';
+            }
+
+            if (hasOverride) {
+                statusBadge += ' <span style="color:var(--blue); font-size:11px">+ manual override</span>';
+            }
+
+            const lastSuccess = s.lastSuccess ? formatDate(s.lastSuccess) : "Never";
+            const daysSince = s.lastSuccess
+                ? Math.floor((new Date() - new Date(s.lastSuccess)) / 86400000)
+                : null;
+            const staleWarning = daysSince !== null && daysSince > 3
+                ? ` <span style="color:var(--red); font-size:11px">(${daysSince}d ago!)</span>`
+                : "";
+
+            return `
+                <tr>
+                    <td style="font-weight:600">${provider.name}</td>
+                    <td>${statusBadge}</td>
+                    <td>${s.pricesFound}/5 sizes</td>
+                    <td>${lastSuccess}${staleWarning}</td>
+                    <td style="color:var(--text-muted); font-size:13px">${s.message}</td>
                 </tr>
             `;
         }).join("");

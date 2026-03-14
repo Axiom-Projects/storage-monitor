@@ -152,6 +152,30 @@
             </div>
         </section>
 
+        <!-- Scrape Status -->
+        <section class="card">
+            <h2>Data Source Status</h2>
+            <p style="color:var(--text-muted); font-size:13px; margin-bottom:16px">
+                Shows whether automated scraping is successfully pulling prices for each provider.
+                Red = scraper can't get prices (use manual entry). Green = automated.
+            </p>
+            <div class="table-wrapper">
+                <table id="status-table">
+                    <thead>
+                        <tr>
+                            <th>Provider</th>
+                            <th>Status</th>
+                            <th>Prices Found</th>
+                            <th>Last Successful Scrape</th>
+                            <th>Notes</th>
+                        </tr>
+                    </thead>
+                    <tbody id="status-table-body">
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
         <!-- Manual Price Entry -->
         <section class="card">
             <h2>Manual Price Update</h2>

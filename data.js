@@ -281,6 +281,16 @@ const DEALS_HISTORY = [
     }
 ];
 
+// Scrape status - tracks whether each provider's prices were successfully scraped
+// "ok" = prices extracted, "partial" = some sizes missing, "failed" = no prices extracted
+const SCRAPE_STATUS = {
+    metro:     { status: "sample", lastSuccess: "2026-03-14", pricesFound: 5, message: "Sample data - awaiting first real scrape" },
+    access:    { status: "sample", lastSuccess: "2026-03-14", pricesFound: 5, message: "Sample data - awaiting first real scrape" },
+    urban:     { status: "sample", lastSuccess: "2026-03-14", pricesFound: 5, message: "Sample data - awaiting first real scrape" },
+    safestore: { status: "sample", lastSuccess: "2026-03-14", pricesFound: 5, message: "Sample data - awaiting first real scrape" },
+    bigyellow: { status: "sample", lastSuccess: "2026-03-14", pricesFound: 5, message: "Sample data - awaiting first real scrape" }
+};
+
 // Metadata
 const DATA_META = {
     lastScraped: "2026-03-14T08:30:00Z",

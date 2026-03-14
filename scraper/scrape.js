@@ -462,7 +462,8 @@ function readExistingData() {
             priceHistory: extract("PRICE_HISTORY"),
             priceChanges: extract("PRICE_CHANGES"),
             currentDeals: extract("CURRENT_DEALS"),
-            dealsHistory: extract("DEALS_HISTORY")
+            dealsHistory: extract("DEALS_HISTORY"),
+            scrapeStatus: extract("SCRAPE_STATUS")
         };
     } catch {
         return { currentPrices: null, priceHistory: [], priceChanges: [], currentDeals: {}, dealsHistory: [] };
@@ -552,6 +553,32 @@ function buildDataFile(existing, scraped, today) {
         }
     }
 
+    // Build scrape status
+    const scrapeStatus = {};
+    for (const [key, result] of Object.entries(scraped)) {
+        const pricesFound = result.prices ? Object.keys(result.prices).length : 0;
+        let status, message;
+        if (result.error) {
+            status = "failed";
+            message = `Scrape error: ${result.error.substring(0, 80)}`;
+        } else if (pricesFound >= 5) {
+            status = "ok";
+            message = "All sizes scraped successfully";
+        } else if (pricesFound > 0) {
+            status = "partial";
+            message = `Only ${pricesFound}/5 sizes found - may need manual entry for missing sizes`;
+        } else {
+            status = "failed";
+            message = "No prices extracted - site may be blocking or layout changed";
+        }
+        scrapeStatus[key] = {
+            status,
+            lastSuccess: pricesFound > 0 ? today : (existing.scrapeStatus && existing.scrapeStatus[key] ? existing.scrapeStatus[key].lastSuccess : null),
+            pricesFound,
+            message
+        };
+    }
+
     // Add today's prices to history
     const history = [...(existing.priceHistory || [])];
     // Don't add duplicate date entries
@@ -593,6 +620,9 @@ const PRICE_CHANGES = ${JSON.stringify(newChanges, null, 4)};
 
 // Deals history
 const DEALS_HISTORY = ${JSON.stringify(dealsHistory, null, 4)};
+
+// Scrape status
+const SCRAPE_STATUS = ${JSON.stringify(scrapeStatus, null, 4)};
 
 // Metadata
 const DATA_META = {
