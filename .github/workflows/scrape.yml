@@ -2,7 +2,7 @@ name: Scrape Storage Prices
 
 on:
   schedule:
-    # Run daily at 7am UK time (07:00 UTC in winter, 06:00 UTC in summer)
+    # Daily at 7am UK time - aggregator + deals scraping
     - cron: '0 7 * * *'
   workflow_dispatch: # Allow manual trigger
 
@@ -12,8 +12,21 @@ permissions:
 jobs:
   scrape:
     runs-on: ubuntu-latest
+    outputs:
+      is_monday: ${{ steps.check-day.outputs.is_monday }}
     steps:
       - uses: actions/checkout@v4
+
+      - name: Check if Monday (quote day)
+        id: check-day
+        run: |
+          DAY=$(date +%u)
+          echo "Day of week: $DAY (1=Monday)"
+          if [ "$DAY" = "1" ] || [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "is_monday=true" >> $GITHUB_OUTPUT
+          else
+            echo "is_monday=false" >> $GITHUB_OUTPUT
+          fi
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -35,10 +48,113 @@ jobs:
           cd scraper
           node scrape.js
 
+      - name: Upload email credentials (for follow-up checks)
+        if: steps.check-day.outputs.is_monday == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: email-creds
+          path: scraper/email-creds.json
+          retention-days: 1
+        continue-on-error: true
+
       - name: Commit and push changes
         run: |
           git config user.name "Storage Monitor Bot"
           git config user.email "bot@storage-monitor.local"
           git add data.js
           git diff --staged --quiet || git commit -m "Update pricing data $(date +%Y-%m-%d)"
+          git push
+
+  # Follow-up email check - 1 hour after scrape (Mondays / manual only)
+  check-emails-1h:
+    needs: scrape
+    if: needs.scrape.outputs.is_monday == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Pull latest
+        run: git pull origin main
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Download email credentials
+        uses: actions/download-artifact@v4
+        with:
+          name: email-creds
+          path: scraper/
+
+      - name: Wait 1 hour for quote emails to arrive
+        run: sleep 3600
+
+      - name: Check emails for quotes
+        run: |
+          cd scraper
+          node check-emails.js
+
+      - name: Upload updated email creds
+        uses: actions/upload-artifact@v4
+        with:
+          name: email-creds-1h
+          path: scraper/email-creds.json
+          retention-days: 1
+        continue-on-error: true
+
+      - name: Commit and push if changes
+        run: |
+          git config user.name "Storage Monitor Bot"
+          git config user.email "bot@storage-monitor.local"
+          git pull origin main
+          git add data.js
+          git diff --staged --quiet || git commit -m "Update from email quotes - 1hr check $(date +%Y-%m-%d)"
+          git push
+
+  # Follow-up email check - 3 hours after scrape
+  check-emails-3h:
+    needs: [scrape, check-emails-1h]
+    if: needs.scrape.outputs.is_monday == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Pull latest
+        run: git pull origin main
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Download email credentials
+        uses: actions/download-artifact@v4
+        with:
+          name: email-creds-1h
+          path: scraper/
+        continue-on-error: true
+
+      - name: Download original email credentials (fallback)
+        if: failure()
+        uses: actions/download-artifact@v4
+        with:
+          name: email-creds
+          path: scraper/
+
+      - name: Wait 2 more hours for late emails
+        run: sleep 7200
+
+      - name: Check emails for quotes
+        run: |
+          cd scraper
+          node check-emails.js
+
+      - name: Commit and push if changes
+        run: |
+          git config user.name "Storage Monitor Bot"
+          git config user.email "bot@storage-monitor.local"
+          git pull origin main
+          git add data.js
+          git diff --staged --quiet || git commit -m "Update from email quotes - 3hr check $(date +%Y-%m-%d)"
           git push

@@ -1,8 +1,10 @@
 #!/usr/bin/env node
 // ============================================================
-// STORAGE MONITOR - PRICE SCRAPER v3
-// Strategy: Submit quote forms with temp email, capture prices
-// from on-screen responses + parse quote emails
+// STORAGE MONITOR - PRICE SCRAPER v4
+// Strategy:
+//   DAILY: Scrape aggregator sites (StorageLocator) + detect deals
+//   WEEKLY (Monday): Submit quote forms with rotating fake identity
+//   Email checker runs separately after quote submission
 // ============================================================
 
 const { chromium } = require("playwright");
@@ -10,32 +12,47 @@ const fs = require("fs");
 const path = require("path");
 
 const DATA_FILE = path.join(__dirname, "..", "data.js");
+const CREDS_FILE = path.join(__dirname, "email-creds.json");
 const TARGET_SIZES = [25, 50, 75, 100, 150];
 
-// Dummy contact details for quote forms
-const CONTACT = {
-    firstName: "James",
-    lastName: "Wilson",
-    phone: "07700900123",
-    // Email will be set dynamically via mail.tm
-    email: null
-};
+// Rotating identities - different one each week
+const IDENTITIES = [
+    { firstName: "James", lastName: "Wilson", phone: "07700900123" },
+    { firstName: "Sarah", lastName: "Thompson", phone: "07700900456" },
+    { firstName: "David", lastName: "Brown", phone: "07700900789" },
+    { firstName: "Emma", lastName: "Taylor", phone: "07700901234" },
+    { firstName: "Michael", lastName: "Davies", phone: "07700901567" },
+    { firstName: "Rachel", lastName: "Clarke", phone: "07700901890" },
+    { firstName: "Tom", lastName: "Harris", phone: "07700902123" },
+    { firstName: "Laura", lastName: "Mitchell", phone: "07700902456" },
+    { firstName: "Chris", lastName: "Roberts", phone: "07700902789" },
+    { firstName: "Katie", lastName: "Evans", phone: "07700903012" }
+];
+
+function getWeeklyIdentity() {
+    // Pick identity based on week number so it rotates
+    const weekNum = Math.floor(Date.now() / (7 * 24 * 60 * 60 * 1000));
+    return IDENTITIES[weekNum % IDENTITIES.length];
+}
+
+function isQuoteDay() {
+    const day = new Date().getDay(); // 0=Sun, 1=Mon
+    return day === 1; // Only submit quote forms on Mondays
+}
 
 // ============================================================
 // TEMP EMAIL (mail.tm API)
 // ============================================================
 async function createTempEmail() {
     try {
-        // Get available domain
         const domainRes = await fetch("https://api.mail.tm/domains?page=1");
         const domainData = await domainRes.json();
         const domain = domainData["hydra:member"]?.[0]?.domain;
         if (!domain) throw new Error("No mail.tm domain available");
 
-        const address = `storagemonitor${Date.now()}@${domain}`;
-        const password = "StorMon2026!";
+        const address = `sq${Date.now()}@${domain}`;
+        const password = `Sm${Date.now()}!`;
 
-        // Create account
         const createRes = await fetch("https://api.mail.tm/accounts", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -44,12 +61,10 @@ async function createTempEmail() {
 
         if (!createRes.ok) {
             const err = await createRes.text();
-            console.log(`  mail.tm account creation: ${createRes.status} ${err}`);
-            // Might already exist or rate limited - use a fallback
-            return { address: `storagequotes${Math.floor(Math.random() * 9999)}@gmail.com`, token: null, isFake: true };
+            console.log(`  mail.tm creation: ${createRes.status} - ${err.substring(0, 100)}`);
+            return null;
         }
 
-        // Get auth token
         const tokenRes = await fetch("https://api.mail.tm/token", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -57,19 +72,30 @@ async function createTempEmail() {
         });
         const tokenData = await tokenRes.json();
 
+        // Save credentials for the email checker to use later
+        const creds = {
+            address,
+            password,
+            token: tokenData.token,
+            savedAt: new Date().toISOString(),
+            processedMessageIds: []
+        };
+        fs.writeFileSync(CREDS_FILE, JSON.stringify(creds, null, 2));
+
         console.log(`  Temp email created: ${address}`);
-        return { address, token: tokenData.token, isFake: false };
+        return { address, token: tokenData.token };
     } catch (err) {
-        console.log(`  mail.tm error: ${err.message} - using fallback email`);
-        return { address: `storagequotes${Math.floor(Math.random() * 9999)}@gmail.com`, token: null, isFake: true };
+        console.log(`  mail.tm error: ${err.message}`);
+        return null;
     }
 }
 
-async function checkEmailInbox(token, waitMs = 30000) {
+async function checkEmailInbox(token, waitMs = 600000) {
     if (!token) return [];
     const messages = [];
     const start = Date.now();
 
+    console.log(`  Polling inbox for ${(waitMs / 60000).toFixed(0)} minutes...`);
     while (Date.now() - start < waitMs) {
         try {
             const res = await fetch("https://api.mail.tm/messages?page=1", {
@@ -87,38 +113,22 @@ async function checkEmailInbox(token, waitMs = 30000) {
                         from: msg.from?.address,
                         subject: msg.subject,
                         text: msg.text || "",
-                        html: msg.html?.join("") || ""
+                        html: (msg.html || []).join("")
                     });
+                    console.log(`  Email received: ${msg.subject} (from ${msg.from?.address})`);
                 }
                 return messages;
             }
         } catch {}
-        await new Promise(r => setTimeout(r, 5000));
+        await new Promise(r => setTimeout(r, 30000)); // Check every 30 seconds
+        process.stdout.write(".");
     }
+    console.log("");
     return messages;
 }
 
-function extractPricesFromEmailText(text) {
-    const prices = {};
-    const lines = text.split(/\n/);
-    for (const line of lines) {
-        const sizeMatch = line.match(/(\d+)\s*(?:sq\.?\s*f(?:ee)?t|sqft)/i);
-        if (!sizeMatch) continue;
-        const size = parseInt(sizeMatch[1]);
-        if (!TARGET_SIZES.includes(size)) continue;
-
-        let priceMatch = line.match(/£\s*(\d+(?:\.\d{1,2})?)\s*(?:per\s+week|\/\s*w(?:ee)?k|pw|p\.w|weekly)/i);
-        if (!priceMatch) priceMatch = line.match(/£\s*(\d+(?:\.\d{1,2})?)/);
-        if (priceMatch) {
-            const p = parseFloat(priceMatch[1]);
-            if (p > 5 && p < 500) prices[size] = p;
-        }
-    }
-    return prices;
-}
-
 // ============================================================
-// HELPERS
+// PRICE EXTRACTION HELPERS
 // ============================================================
 function extractDeals(text) {
     const deals = [];
@@ -149,7 +159,7 @@ function extractPricesFromText(text) {
         if (priceMatch) { prices[size] = parseFloat(priceMatch[1]); continue; }
 
         priceMatch = chunk.match(/£\s*(\d+(?:\.\d{1,2})?)\s*(?:per\s+month|\/\s*m(?:onth)?|pm|p\.m|pcm|monthly)/i);
-        if (priceMatch) { prices[size] = +(parseFloat(priceMatch[1]) * 12 / 52).toFixed(2); continue; }
+        if (priceMatch) { prices[size] = +(parseFloat(priceMatch[1]) / 4).toFixed(2); continue; }
 
         priceMatch = chunk.match(/£\s*(\d+(?:\.\d{1,2})?)/);
         if (priceMatch) {
@@ -164,8 +174,8 @@ function extractPricesFromJSON(obj, prices = {}) {
     if (!obj || typeof obj !== "object") return prices;
     if (Array.isArray(obj)) { obj.forEach(item => extractPricesFromJSON(item, prices)); return prices; }
 
-    const sizeFields = ["size", "sqft", "squareFeet", "sq_ft", "area", "unitSize", "unit_size", "roomSize", "fSize", "Width"];
-    const priceFields = ["price", "weeklyPrice", "weekly_price", "pricePerWeek", "rate", "weeklyRate", "unitPrice", "fPrice", "dPrice", "standardPrice", "webPrice"];
+    const sizeFields = ["size", "sqft", "squareFeet", "sq_ft", "area", "unitSize", "unit_size", "roomSize"];
+    const priceFields = ["price", "weeklyPrice", "weekly_price", "pricePerWeek", "rate", "weeklyRate", "unitPrice", "standardPrice", "webPrice"];
 
     let foundSize = null, foundPrice = null;
     for (const sf of sizeFields) { if (obj[sf] !== undefined) { foundSize = Number(obj[sf]); break; } }
@@ -175,17 +185,35 @@ function extractPricesFromJSON(obj, prices = {}) {
         prices[foundSize] = foundPrice;
     }
 
-    const nameFields = ["name", "description", "title", "label", "unitName", "roomName"];
-    for (const nf of nameFields) {
-        if (obj[nf] && typeof obj[nf] === "string") {
-            const m = obj[nf].match(/(\d+)\s*(?:sq\.?\s*f(?:ee)?t|sqft)/i);
-            if (m && TARGET_SIZES.includes(parseInt(m[1])) && foundPrice) {
-                prices[parseInt(m[1])] = foundPrice;
-            }
-        }
-    }
-
     Object.values(obj).forEach(val => extractPricesFromJSON(val, prices));
+    return prices;
+}
+
+function extractPricesFromEmailText(text) {
+    const prices = {};
+    const cleanText = text
+        .replace(/<br\s*\/?>/gi, "\n")
+        .replace(/<\/?(p|div|tr|td|th|li)[^>]*>/gi, "\n")
+        .replace(/<[^>]+>/g, " ")
+        .replace(/&pound;/gi, "£")
+        .replace(/&nbsp;/g, " ");
+
+    const lines = cleanText.split(/\n/);
+    for (const line of lines) {
+        const sizeMatch = line.match(/(\d+)\s*(?:sq\.?\s*f(?:ee)?t|sqft)/i);
+        if (!sizeMatch) continue;
+        const size = parseInt(sizeMatch[1]);
+        if (!TARGET_SIZES.includes(size)) continue;
+
+        let priceMatch = line.match(/£\s*(\d+(?:\.\d{1,2})?)\s*(?:per\s+week|\/\s*w(?:ee)?k|pw|p\.w\.?|weekly)/i);
+        if (priceMatch) { const p = parseFloat(priceMatch[1]); if (p > 5 && p < 500) { prices[size] = p; continue; } }
+
+        priceMatch = line.match(/£\s*(\d+(?:\.\d{1,2})?)\s*(?:per\s+month|\/\s*m(?:onth)?|pm|p\.m\.?|pcm|monthly)/i);
+        if (priceMatch) { const m = parseFloat(priceMatch[1]); if (m > 20 && m < 2000) { prices[size] = +(m / 4).toFixed(2); continue; } }
+
+        priceMatch = line.match(/£\s*(\d+(?:\.\d{1,2})?)/);
+        if (priceMatch) { const p = parseFloat(priceMatch[1]); if (p > 10 && p < 300) prices[size] = p; }
+    }
     return prices;
 }
 
@@ -200,18 +228,12 @@ async function tryClick(page, selectors) {
 }
 
 async function tryFill(page, selector, value) {
-    try {
-        const el = await page.$(selector);
-        if (el && await el.isVisible()) { await el.fill(value); return true; }
-    } catch {}
+    try { const el = await page.$(selector); if (el && await el.isVisible()) { await el.fill(value); return true; } } catch {}
     return false;
 }
 
 async function trySelect(page, selector, value) {
-    try {
-        const el = await page.$(selector);
-        if (el && await el.isVisible()) { await el.selectOption(value); return true; }
-    } catch {}
+    try { const el = await page.$(selector); if (el && await el.isVisible()) { await el.selectOption(value); return true; } } catch {}
     return false;
 }
 
@@ -237,329 +259,278 @@ async function screenshot(page, name) {
 }
 
 // ============================================================
-// SCRAPERS
+// AGGREGATOR SCRAPER (runs daily - no quote forms needed)
 // ============================================================
-const SCRAPERS = {
-    metro: {
-        name: "Metro Storage",
-        async scrape(context, email) {
+async function scrapeStorageLocator(context) {
+    console.log("\n--- Scraping StorageLocator (aggregator) ---");
+    const prices = { access: {}, urban: {}, safestore: {}, bigyellow: {} };
+
+    const pages = {
+        access: "https://storagelocator.co.uk/location/access-self-storage-islington/",
+        urban: "https://storagelocator.co.uk/location/urban-locker/",
+        safestore: "https://storagelocator.co.uk/location/safestore-self-storage-kings-cross/",
+        bigyellow: "https://storagelocator.co.uk/location/big-yellow-kings-cross/"
+    };
+
+    // Also try nearby branches for Big Yellow
+    const fallbackPages = {
+        bigyellow: "https://storagelocator.co.uk/location/big-yellow-kennington/"
+    };
+
+    for (const [provider, url] of Object.entries(pages)) {
+        try {
             const page = await context.newPage();
-            const apiData = [];
-            interceptAll(page, apiData);
-
-            await page.goto("https://www.metro-storage.co.uk/self-storage-n1/", { waitUntil: "domcontentloaded", timeout: 30000 });
-            await page.waitForTimeout(5000);
-
-            // Get deals from page
-            const text = await page.evaluate(() => document.body?.innerText || "");
-            const deals = extractDeals(text);
-            let prices = extractPricesFromText(text);
-
-            // Try to find and click quote/price links
-            const clicked = await tryClick(page, [
-                'a[href*="quote"]', 'a[href*="price"]', 'a[href*="book"]',
-                'text=/get.*quote/i', 'text=/see.*price/i', 'text=/book/i'
-            ]);
-            if (clicked) {
-                await page.waitForTimeout(5000);
-                const newText = await page.evaluate(() => document.body?.innerText || "");
-                Object.assign(prices, extractPricesFromText(newText));
-            }
-
-            // Check intercepted APIs
-            for (const { body } of apiData) {
-                try { Object.assign(prices, extractPricesFromJSON(JSON.parse(body))); } catch {}
-            }
-
-            await screenshot(page, "metro");
-            await page.close();
-            return { prices, deals };
-        }
-    },
-
-    access: {
-        name: "Access Self Storage",
-        async scrape(context, email) {
-            const page = await context.newPage();
-            const apiData = [];
-            interceptAll(page, apiData);
-
-            // Go to the RapidStor quote tool
-            await page.goto("https://www.accessstorage.com/storage?storeid=26", { waitUntil: "domcontentloaded", timeout: 30000 });
-            await page.waitForTimeout(5000);
-
-            // Accept cookies
-            await tryClick(page, ['text=/accept.*cookie/i', 'text=/accept.*all/i', '#cookie-accept', 'button[class*="cookie"]', 'text=/agree/i']);
-            await page.waitForTimeout(2000);
-
-            // The RapidStor widget should be loaded. Try to select sizes.
-            // Look for size selection buttons or dropdowns
-            for (const size of TARGET_SIZES) {
-                // Try clicking size options
-                await tryClick(page, [
-                    `text="${size} sq ft"`, `text="${size} sqft"`, `text="${size}sq ft"`,
-                    `[data-size="${size}"]`, `[data-sqft="${size}"]`
-                ]);
-            }
+            await page.goto(url, { waitUntil: "domcontentloaded", timeout: 20000 });
             await page.waitForTimeout(3000);
 
-            // Try filling in quote form if visible
-            await tryFill(page, 'input[name*="name"], input[name*="first"]', CONTACT.firstName);
-            await tryFill(page, 'input[name*="last"], input[name*="surname"]', CONTACT.lastName);
-            await tryFill(page, 'input[name*="email"], input[type="email"]', email);
-            await tryFill(page, 'input[name*="phone"], input[name*="tel"], input[type="tel"]', CONTACT.phone);
-
-            // Submit
-            await tryClick(page, ['text=/get.*quote/i', 'text=/submit/i', 'text=/next/i', 'button[type="submit"]']);
-            await page.waitForTimeout(5000);
-
             const text = await page.evaluate(() => document.body?.innerText || "");
-            let prices = extractPricesFromText(text);
 
-            // Also get deals from main page
-            const mainPage = await context.newPage();
-            await mainPage.goto("https://www.accessstorage.com/central-london/access-self-storage-islington", { waitUntil: "domcontentloaded", timeout: 20000 });
-            await mainPage.waitForTimeout(3000);
-            const mainText = await mainPage.evaluate(() => document.body?.innerText || "");
-            const deals = extractDeals(mainText + "\n" + text);
-            await mainPage.close();
-
-            for (const { body } of apiData) {
-                try { Object.assign(prices, extractPricesFromJSON(JSON.parse(body))); } catch {}
+            // StorageLocator shows prices like "25 sq ft ... £35.77 per week"
+            const extracted = extractPricesFromText(text);
+            if (Object.keys(extracted).length > 0) {
+                prices[provider] = extracted;
+                console.log(`  ${provider}: ${JSON.stringify(extracted)}`);
+            } else {
+                console.log(`  ${provider}: No prices found on StorageLocator`);
             }
 
-            console.log(`  Intercepted ${apiData.length} API calls`);
-            await screenshot(page, "access");
             await page.close();
-            return { prices, deals };
-        }
-    },
-
-    urban: {
-        name: "Urban Locker",
-        async scrape(context, email) {
-            let prices = {};
-            const apiData = [];
-
-            // Visit each size's quote page and try to submit
-            for (const size of TARGET_SIZES) {
-                const page = await context.newPage();
-                interceptAll(page, apiData);
-
-                const url = `https://quote.urbanlocker.co.uk/storage/urban-locker-islington/${size}`;
-                console.log(`    Size ${size}sqft: ${url}`);
-                try {
-                    await page.goto(url, { waitUntil: "domcontentloaded", timeout: 20000 });
-                    await page.waitForTimeout(4000);
-
-                    // Fill in the quote form
-                    await trySelect(page, 'select[name*="title"]', 'Mr');
-                    await tryFill(page, 'input[name*="first"], input[name*="First"]', CONTACT.firstName);
-                    await tryFill(page, 'input[name*="last"], input[name*="Last"], input[name*="surname"], input[name*="Surname"]', CONTACT.lastName);
-                    await tryFill(page, 'input[name*="email"], input[name*="Email"], input[type="email"]', email);
-                    await tryFill(page, 'input[name*="phone"], input[name*="Phone"], input[name*="tel"], input[type="tel"]', CONTACT.phone);
-
-                    // Submit the form
-                    const submitted = await tryClick(page, [
-                        'text=/get.*quote/i', 'text=/submit/i', 'text=/request/i',
-                        'button[type="submit"]', 'input[type="submit"]'
-                    ]);
-
-                    if (submitted) {
-                        console.log(`    Submitted form for ${size}sqft`);
-                        await page.waitForTimeout(8000);
-
-                        // Check if price appeared on screen
-                        const responseText = await page.evaluate(() => document.body?.innerText || "");
-                        const found = extractPricesFromText(responseText);
-                        if (found[size]) {
-                            prices[size] = found[size];
-                            console.log(`    Got price for ${size}sqft: £${found[size]}`);
-                        }
-
-                        // Also check for any price on the page
-                        const anyPrice = await page.evaluate(() => {
-                            const matches = document.body.innerText.match(/£\s*(\d+(?:\.\d{1,2})?)/g);
-                            if (matches) {
-                                for (const m of matches) {
-                                    const val = parseFloat(m.replace(/£\s*/, ""));
-                                    if (val > 10 && val < 300) return val;
-                                }
-                            }
-                            return null;
-                        });
-                        if (anyPrice && !prices[size]) {
-                            prices[size] = anyPrice;
-                            console.log(`    Found price on page for ${size}sqft: £${anyPrice}`);
-                        }
-                    }
-
-                    if (size === 50) await screenshot(page, "urban");
-                } catch (err) {
-                    console.log(`    Error on size ${size}: ${err.message}`);
-                }
-                await page.close();
-            }
-
-            // Get deals from main page
-            const dealsPage = await context.newPage();
-            await dealsPage.goto("https://www.urbanlocker.co.uk/storage/islington/", { waitUntil: "domcontentloaded", timeout: 20000 });
-            await dealsPage.waitForTimeout(3000);
-            const dealsText = await dealsPage.evaluate(() => document.body?.innerText || "");
-            const deals = extractDeals(dealsText);
-            await dealsPage.close();
-
-            for (const { body } of apiData) {
-                try { Object.assign(prices, extractPricesFromJSON(JSON.parse(body))); } catch {}
-            }
-
-            return { prices, deals };
-        }
-    },
-
-    safestore: {
-        name: "Safestore",
-        async scrape(context, email) {
-            const page = await context.newPage();
-            const apiData = [];
-            interceptAll(page, apiData);
-
-            await page.goto("https://www.safestore.co.uk/self-storage/london/north/kings-cross/", { waitUntil: "domcontentloaded", timeout: 45000 });
-            await page.waitForTimeout(8000);
-
-            // Accept cookies
-            await tryClick(page, ['#onetrust-accept-btn-handler', 'text=/accept.*cookie/i', 'text=/accept.*all/i']);
-            await page.waitForTimeout(2000);
-
-            // Try to find quote form or pricing section
-            await tryClick(page, [
-                'text=/get.*quote/i', 'text=/see.*price/i', 'text=/view.*room/i',
-                'text=/check.*availability/i', 'text=/book.*now/i', 'text=/reserve/i',
-                'a[href*="quote"]', 'a[href*="book"]'
-            ]);
-            await page.waitForTimeout(5000);
-
-            // Try filling any visible form
-            await tryFill(page, 'input[name*="name"], input[name*="first"]', CONTACT.firstName);
-            await tryFill(page, 'input[name*="last"], input[name*="surname"]', CONTACT.lastName);
-            await tryFill(page, 'input[name*="email"], input[type="email"]', email);
-            await tryFill(page, 'input[name*="phone"], input[name*="tel"], input[type="tel"]', CONTACT.phone);
-            await tryClick(page, ['button[type="submit"]', 'text=/submit/i', 'text=/get.*quote/i']);
-            await page.waitForTimeout(5000);
-
-            // Scroll through page
-            for (let i = 1; i <= 4; i++) {
-                await page.evaluate((step) => window.scrollTo(0, (document.body.scrollHeight * step) / 4), i);
-                await page.waitForTimeout(1500);
-            }
-
-            const text = await page.evaluate(() => document.body?.innerText || "");
-            let prices = extractPricesFromText(text);
-            const deals = extractDeals(text);
-
-            // Parse API data - log useful-looking ones
-            let jsonApiCount = 0;
-            for (const { url, body } of apiData) {
-                if (body.startsWith("{") || body.startsWith("[")) {
-                    jsonApiCount++;
-                    try {
-                        const json = JSON.parse(body);
-                        Object.assign(prices, extractPricesFromJSON(json));
-                        // Also try text-based extraction on stringified JSON
-                        const jsonStr = JSON.stringify(json);
-                        if (jsonStr.includes("price") || jsonStr.includes("rate") || jsonStr.includes("£")) {
-                            console.log(`    API with pricing keywords: ${url.substring(0, 100)}`);
-                            console.log(`    Preview: ${jsonStr.substring(0, 200)}`);
-                        }
-                    } catch {}
-                }
-            }
-            console.log(`  Total JSON API calls: ${jsonApiCount}/${apiData.length}`);
-
-            await screenshot(page, "safestore");
-            await page.close();
-            return { prices, deals };
-        }
-    },
-
-    bigyellow: {
-        name: "Big Yellow",
-        async scrape(context, email) {
-            const page = await context.newPage();
-            const apiData = [];
-            interceptAll(page, apiData);
-
-            // Use domcontentloaded instead of networkidle (Big Yellow is slow)
-            await page.goto("https://www.bigyellow.co.uk/kings-cross-self-storage-units", { waitUntil: "domcontentloaded", timeout: 45000 });
-            await page.waitForTimeout(8000);
-
-            // Accept cookies
-            await tryClick(page, ['#onetrust-accept-btn-handler', 'text=/accept.*cookie/i', 'text=/got it/i', 'text=/agree/i']);
-            await page.waitForTimeout(2000);
-
-            // Try various navigation paths
-            await tryClick(page, [
-                'text=/get.*quote/i', 'text=/see.*room/i', 'text=/view.*room/i',
-                'text=/check.*price/i', 'text=/book/i', 'text=/reserve/i',
-                'a[href*="quote"]', 'a[href*="price"]', 'a[href*="room"]', 'a[href*="book"]'
-            ]);
-            await page.waitForTimeout(5000);
-
-            // Fill any visible form
-            await tryFill(page, 'input[name*="name"], input[name*="first"]', CONTACT.firstName);
-            await tryFill(page, 'input[name*="email"], input[type="email"]', email);
-            await tryFill(page, 'input[name*="phone"], input[name*="tel"], input[type="tel"]', CONTACT.phone);
-            await tryClick(page, ['button[type="submit"]', 'text=/submit/i', 'text=/get.*quote/i']);
-            await page.waitForTimeout(5000);
-
-            // Scroll
-            for (let i = 1; i <= 5; i++) {
-                await page.evaluate((s) => window.scrollTo(0, (document.body.scrollHeight * s) / 5), i);
-                await page.waitForTimeout(1000);
-            }
-
-            const text = await page.evaluate(() => document.body?.innerText || "");
-            let prices = extractPricesFromText(text);
-            const deals = extractDeals(text);
-
-            let jsonApiCount = 0;
-            for (const { url, body } of apiData) {
-                if (body.startsWith("{") || body.startsWith("[")) {
-                    jsonApiCount++;
-                    try {
-                        const json = JSON.parse(body);
-                        Object.assign(prices, extractPricesFromJSON(json));
-                        const jsonStr = JSON.stringify(json);
-                        if (jsonStr.includes("price") || jsonStr.includes("rate") || jsonStr.includes("£")) {
-                            console.log(`    API with pricing keywords: ${url.substring(0, 100)}`);
-                            console.log(`    Preview: ${jsonStr.substring(0, 200)}`);
-                        }
-                    } catch {}
-                }
-            }
-            console.log(`  Total JSON API calls: ${jsonApiCount}/${apiData.length}`);
-
-            await screenshot(page, "bigyellow");
-            await page.close();
-            return { prices, deals };
+        } catch (err) {
+            console.log(`  ${provider}: StorageLocator error - ${err.message}`);
         }
     }
-};
+
+    // Try fallback pages for providers with no prices
+    for (const [provider, url] of Object.entries(fallbackPages)) {
+        if (Object.keys(prices[provider]).length === 0) {
+            try {
+                console.log(`  ${provider}: Trying fallback location...`);
+                const page = await context.newPage();
+                await page.goto(url, { waitUntil: "domcontentloaded", timeout: 20000 });
+                await page.waitForTimeout(3000);
+
+                const text = await page.evaluate(() => document.body?.innerText || "");
+                const extracted = extractPricesFromText(text);
+                if (Object.keys(extracted).length > 0) {
+                    prices[provider] = extracted;
+                    console.log(`  ${provider} (fallback): ${JSON.stringify(extracted)}`);
+                }
+
+                await page.close();
+            } catch (err) {
+                console.log(`  ${provider} fallback error: ${err.message}`);
+            }
+        }
+    }
+
+    return prices;
+}
+
+// ============================================================
+// DEAL SCRAPERS (runs daily - just reads public pages)
+// ============================================================
+async function scrapeDailyDeals(context) {
+    console.log("\n--- Scraping deals from competitor sites ---");
+    const deals = {};
+
+    const sites = {
+        metro: "https://www.metro-storage.co.uk/self-storage-n1/",
+        access: "https://www.accessstorage.com/central-london/access-self-storage-islington",
+        urban: "https://www.urbanlocker.co.uk/storage/islington/",
+        safestore: "https://www.safestore.co.uk/self-storage/london/north/kings-cross/",
+        bigyellow: "https://www.bigyellow.co.uk/kings-cross-self-storage-units"
+    };
+
+    for (const [provider, url] of Object.entries(sites)) {
+        try {
+            const page = await context.newPage();
+            await page.goto(url, { waitUntil: "domcontentloaded", timeout: 30000 });
+            await page.waitForTimeout(5000);
+
+            // Accept cookies
+            await tryClick(page, ['#onetrust-accept-btn-handler', 'text=/accept.*cookie/i', 'text=/accept.*all/i', 'text=/agree/i']);
+            await page.waitForTimeout(1000);
+
+            const text = await page.evaluate(() => document.body?.innerText || "");
+            deals[provider] = extractDeals(text);
+
+            if (deals[provider].length > 0) {
+                console.log(`  ${provider}: ${deals[provider].join(" | ")}`);
+            } else {
+                console.log(`  ${provider}: No deals detected`);
+            }
+
+            await screenshot(page, provider);
+            await page.close();
+        } catch (err) {
+            console.log(`  ${provider}: Error - ${err.message}`);
+            deals[provider] = [];
+        }
+    }
+
+    return deals;
+}
+
+// ============================================================
+// QUOTE FORM SUBMITTERS (runs weekly only)
+// ============================================================
+async function submitQuoteForms(context, email, identity) {
+    console.log(`\n--- Submitting quote forms (weekly) ---`);
+    console.log(`  Identity: ${identity.firstName} ${identity.lastName}`);
+    console.log(`  Email: ${email}`);
+    const prices = {};
+
+    // Access Self Storage - RapidStor widget
+    try {
+        console.log("\n  >> Access Self Storage");
+        const page = await context.newPage();
+        const apiData = [];
+        interceptAll(page, apiData);
+
+        await page.goto("https://www.accessstorage.com/storage?storeid=26", { waitUntil: "domcontentloaded", timeout: 30000 });
+        await page.waitForTimeout(5000);
+        await tryClick(page, ['text=/accept.*cookie/i', 'text=/accept.*all/i', '#cookie-accept']);
+        await page.waitForTimeout(2000);
+
+        await tryFill(page, 'input[name*="name"], input[name*="first"]', identity.firstName);
+        await tryFill(page, 'input[name*="last"], input[name*="surname"]', identity.lastName);
+        await tryFill(page, 'input[name*="email"], input[type="email"]', email);
+        await tryFill(page, 'input[name*="phone"], input[name*="tel"], input[type="tel"]', identity.phone);
+        await tryClick(page, ['text=/get.*quote/i', 'text=/submit/i', 'text=/next/i', 'button[type="submit"]']);
+        await page.waitForTimeout(5000);
+
+        const text = await page.evaluate(() => document.body?.innerText || "");
+        prices.access = extractPricesFromText(text);
+        for (const { body } of apiData) {
+            try { Object.assign(prices.access || (prices.access = {}), extractPricesFromJSON(JSON.parse(body))); } catch {}
+        }
+        console.log(`  Intercepted ${apiData.length} API calls`);
+        await page.close();
+    } catch (err) {
+        console.log(`  Access error: ${err.message}`);
+    }
+
+    // Urban Locker - per-size quote pages
+    try {
+        console.log("\n  >> Urban Locker");
+        prices.urban = {};
+        for (const size of TARGET_SIZES) {
+            const page = await context.newPage();
+            const apiData = [];
+            interceptAll(page, apiData);
+
+            const url = `https://quote.urbanlocker.co.uk/storage/urban-locker-islington/${size}`;
+            try {
+                await page.goto(url, { waitUntil: "domcontentloaded", timeout: 20000 });
+                await page.waitForTimeout(4000);
+
+                await trySelect(page, 'select[name*="title"]', 'Mr');
+                await tryFill(page, 'input[name*="first"], input[name*="First"]', identity.firstName);
+                await tryFill(page, 'input[name*="last"], input[name*="Last"], input[name*="surname"]', identity.lastName);
+                await tryFill(page, 'input[name*="email"], input[name*="Email"], input[type="email"]', email);
+                await tryFill(page, 'input[name*="phone"], input[name*="Phone"], input[name*="tel"]', identity.phone);
+
+                await tryClick(page, ['text=/get.*quote/i', 'text=/submit/i', 'text=/request/i', 'button[type="submit"]', 'input[type="submit"]']);
+                await page.waitForTimeout(8000);
+
+                const responseText = await page.evaluate(() => document.body?.innerText || "");
+                const found = extractPricesFromText(responseText);
+                if (found[size]) prices.urban[size] = found[size];
+
+                for (const { body } of apiData) {
+                    try { Object.assign(prices.urban, extractPricesFromJSON(JSON.parse(body))); } catch {}
+                }
+            } catch (err) {
+                console.log(`    ${size}sqft error: ${err.message}`);
+            }
+            await page.close();
+        }
+    } catch (err) {
+        console.log(`  Urban Locker error: ${err.message}`);
+    }
+
+    // Safestore - quote form
+    try {
+        console.log("\n  >> Safestore");
+        const page = await context.newPage();
+        const apiData = [];
+        interceptAll(page, apiData);
+
+        await page.goto("https://www.safestore.co.uk/self-storage/london/north/kings-cross/", { waitUntil: "domcontentloaded", timeout: 45000 });
+        await page.waitForTimeout(8000);
+        await tryClick(page, ['#onetrust-accept-btn-handler', 'text=/accept.*cookie/i']);
+        await page.waitForTimeout(2000);
+
+        await tryClick(page, ['text=/get.*quote/i', 'text=/see.*price/i', 'text=/check.*availability/i', 'a[href*="quote"]']);
+        await page.waitForTimeout(5000);
+
+        await tryFill(page, 'input[name*="name"], input[name*="first"]', identity.firstName);
+        await tryFill(page, 'input[name*="last"], input[name*="surname"]', identity.lastName);
+        await tryFill(page, 'input[name*="email"], input[type="email"]', email);
+        await tryFill(page, 'input[name*="phone"], input[name*="tel"]', identity.phone);
+        await tryClick(page, ['button[type="submit"]', 'text=/submit/i', 'text=/get.*quote/i']);
+        await page.waitForTimeout(5000);
+
+        const text = await page.evaluate(() => document.body?.innerText || "");
+        prices.safestore = extractPricesFromText(text);
+        for (const { body } of apiData) {
+            if (body.startsWith("{") || body.startsWith("[")) {
+                try { Object.assign(prices.safestore || (prices.safestore = {}), extractPricesFromJSON(JSON.parse(body))); } catch {}
+            }
+        }
+        await page.close();
+    } catch (err) {
+        console.log(`  Safestore error: ${err.message}`);
+    }
+
+    // Big Yellow - quote form
+    try {
+        console.log("\n  >> Big Yellow");
+        const page = await context.newPage();
+        const apiData = [];
+        interceptAll(page, apiData);
+
+        await page.goto("https://www.bigyellow.co.uk/kings-cross-self-storage-units", { waitUntil: "domcontentloaded", timeout: 45000 });
+        await page.waitForTimeout(8000);
+        await tryClick(page, ['#onetrust-accept-btn-handler', 'text=/accept.*cookie/i', 'text=/agree/i']);
+        await page.waitForTimeout(2000);
+
+        await tryClick(page, ['text=/get.*quote/i', 'text=/see.*room/i', 'text=/check.*price/i', 'a[href*="quote"]']);
+        await page.waitForTimeout(5000);
+
+        await tryFill(page, 'input[name*="name"], input[name*="first"]', identity.firstName);
+        await tryFill(page, 'input[name*="email"], input[type="email"]', email);
+        await tryFill(page, 'input[name*="phone"], input[name*="tel"]', identity.phone);
+        await tryClick(page, ['button[type="submit"]', 'text=/submit/i', 'text=/get.*quote/i']);
+        await page.waitForTimeout(5000);
+
+        const text = await page.evaluate(() => document.body?.innerText || "");
+        prices.bigyellow = extractPricesFromText(text);
+        for (const { body } of apiData) {
+            if (body.startsWith("{") || body.startsWith("[")) {
+                try { Object.assign(prices.bigyellow || (prices.bigyellow = {}), extractPricesFromJSON(JSON.parse(body))); } catch {}
+            }
+        }
+        await page.close();
+    } catch (err) {
+        console.log(`  Big Yellow error: ${err.message}`);
+    }
+
+    return prices;
+}
 
 // ============================================================
 // MAIN
 // ============================================================
 async function main() {
-    console.log("=== Storage Monitor Scraper v3 ===");
+    console.log("=== Storage Monitor Scraper v4 ===");
     console.log(`Date: ${new Date().toISOString()}`);
-
-    // Create temp email
-    console.log("\n--- Setting up temp email ---");
-    const tempEmail = await createTempEmail();
-    CONTACT.email = tempEmail.address;
-    console.log(`  Using email: ${tempEmail.address} (${tempEmail.isFake ? "fallback" : "live inbox"})`);
+    console.log(`Day: ${["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"][new Date().getDay()]}`);
+    console.log(`Mode: ${isQuoteDay() ? "FULL (daily + weekly quotes)" : "DAILY ONLY (aggregator + deals)"}`);
 
     const existingData = readExistingData();
+    const today = new Date().toISOString().split("T")[0];
+    const identity = getWeeklyIdentity();
 
     const browser = await chromium.launch({ headless: true });
     const context = await browser.newContext({
@@ -569,51 +540,80 @@ async function main() {
         timezoneId: "Europe/London"
     });
 
-    const results = {};
-    const today = new Date().toISOString().split("T")[0];
+    // --- DAILY: Aggregator prices ---
+    const aggregatorPrices = await scrapeStorageLocator(context);
 
-    for (const [key, config] of Object.entries(SCRAPERS)) {
-        console.log(`\n--- Scraping: ${config.name} ---`);
-        try {
-            const result = await config.scrape(context, tempEmail.address);
-            results[key] = result;
-            console.log(`  PRICES: ${JSON.stringify(result.prices)}`);
-            console.log(`  DEALS: ${result.deals.length > 0 ? result.deals.join(" | ") : "None"}`);
-            if (Object.keys(result.prices).length === 0) {
-                console.log(`  WARNING: No prices extracted for ${config.name}`);
+    // --- DAILY: Deals from competitor sites ---
+    const dailyDeals = await scrapeDailyDeals(context);
+
+    // --- WEEKLY: Submit quote forms + check emails ---
+    let quotePrices = {};
+    let emailPrices = {};
+
+    if (isQuoteDay()) {
+        console.log("\n--- Monday: Submitting weekly quote requests ---");
+
+        // Create temp email for this week
+        const tempEmail = await createTempEmail();
+
+        if (tempEmail) {
+            quotePrices = await submitQuoteForms(context, tempEmail.address, identity);
+
+            // Wait 10 minutes for immediate auto-reply emails
+            console.log("\n--- Waiting 10 minutes for quote emails ---");
+            const emails = await checkEmailInbox(tempEmail.token, 600000);
+            console.log(`  Received ${emails.length} emails`);
+
+            for (const msg of emails) {
+                console.log(`  From: ${msg.from} | Subject: ${msg.subject}`);
+                const parsed = extractPricesFromEmailText(msg.text || msg.html);
+                if (Object.keys(parsed).length > 0) {
+                    console.log(`  Prices from email: ${JSON.stringify(parsed)}`);
+                    // Match to provider
+                    const sender = `${msg.from} ${msg.subject}`.toLowerCase();
+                    if (sender.includes("access")) emailPrices.access = { ...emailPrices.access, ...parsed };
+                    else if (sender.includes("urban")) emailPrices.urban = { ...emailPrices.urban, ...parsed };
+                    else if (sender.includes("safestore") || sender.includes("safe store")) emailPrices.safestore = { ...emailPrices.safestore, ...parsed };
+                    else if (sender.includes("big yellow") || sender.includes("bigyellow")) emailPrices.bigyellow = { ...emailPrices.bigyellow, ...parsed };
+                }
             }
-        } catch (err) {
-            console.error(`  FATAL ERROR scraping ${config.name}: ${err.message}`);
-            results[key] = { prices: {}, deals: [], error: err.message };
+        } else {
+            console.log("  Could not create temp email - skipping quote forms");
         }
     }
 
     await browser.close();
 
-    // Check email inbox for any quote responses
-    if (tempEmail.token) {
-        console.log("\n--- Checking email inbox for quotes ---");
-        const emails = await checkEmailInbox(tempEmail.token, 30000);
-        console.log(`  Received ${emails.length} emails`);
-        for (const msg of emails) {
-            console.log(`  From: ${msg.from} | Subject: ${msg.subject}`);
-            const emailPrices = extractPricesFromEmailText(msg.text || msg.html);
-            if (Object.keys(emailPrices).length > 0) {
-                console.log(`  Prices from email: ${JSON.stringify(emailPrices)}`);
-                // Try to match email to provider
-                const sender = (msg.from + " " + msg.subject).toLowerCase();
-                for (const [key, config] of Object.entries(SCRAPERS)) {
-                    if (sender.includes(key) || sender.includes(config.name.toLowerCase())) {
-                        Object.assign(results[key].prices, emailPrices);
-                        console.log(`  Matched to ${config.name}`);
-                    }
-                }
-            }
+    // --- Merge all price sources (email > quote form > aggregator > existing) ---
+    const mergedPrices = {};
+    const providerKeys = ["metro", "access", "urban", "safestore", "bigyellow"];
+
+    for (const key of providerKeys) {
+        mergedPrices[key] = {};
+
+        // Start with existing prices as base
+        if (existingData.currentPrices?.[key]) {
+            Object.assign(mergedPrices[key], existingData.currentPrices[key]);
+        }
+
+        // Layer on aggregator prices
+        if (aggregatorPrices[key] && Object.keys(aggregatorPrices[key]).length > 0) {
+            Object.assign(mergedPrices[key], aggregatorPrices[key]);
+        }
+
+        // Layer on quote form prices (higher priority)
+        if (quotePrices[key] && Object.keys(quotePrices[key]).length > 0) {
+            Object.assign(mergedPrices[key], quotePrices[key]);
+        }
+
+        // Layer on email prices (highest priority)
+        if (emailPrices[key] && Object.keys(emailPrices[key]).length > 0) {
+            Object.assign(mergedPrices[key], emailPrices[key]);
         }
     }
 
-    // Build and save data
-    const updatedData = buildDataFile(existingData, results, today);
+    // Build the data file
+    const updatedData = buildDataFile(existingData, mergedPrices, dailyDeals, aggregatorPrices, quotePrices, emailPrices, today);
     fs.writeFileSync(DATA_FILE, updatedData, "utf-8");
     console.log(`\nData file updated: ${DATA_FILE}`);
     console.log("=== Done ===");
@@ -644,30 +644,30 @@ function readExistingData() {
     }
 }
 
-function buildDataFile(existing, scraped, today) {
-    const newPrices = {};
+function buildDataFile(existing, mergedPrices, dailyDeals, aggregatorPrices, quotePrices, emailPrices, today) {
     const newChanges = [...(existing.priceChanges || [])];
     const newDeals = {};
     const dealsHistory = [...(existing.dealsHistory || [])];
 
-    for (const [key, result] of Object.entries(scraped)) {
-        if (result.prices && Object.keys(result.prices).length > 0) {
-            newPrices[key] = result.prices;
-            if (existing.currentPrices && existing.currentPrices[key]) {
-                for (const [size, newPrice] of Object.entries(result.prices)) {
-                    const oldPrice = existing.currentPrices[key][size];
-                    if (oldPrice && oldPrice !== newPrice) {
-                        newChanges.push({ date: today, provider: key, size: parseInt(size), oldPrice, newPrice });
-                        console.log(`  PRICE CHANGE: ${key} ${size}sqft ${oldPrice} -> ${newPrice}`);
-                    }
+    // Detect price changes
+    if (existing.currentPrices) {
+        for (const [key, sizes] of Object.entries(mergedPrices)) {
+            for (const [size, newPrice] of Object.entries(sizes)) {
+                const oldPrice = existing.currentPrices[key]?.[size];
+                if (oldPrice && oldPrice !== newPrice) {
+                    newChanges.push({ date: today, provider: key, size: parseInt(size), oldPrice, newPrice });
+                    console.log(`  PRICE CHANGE: ${key} ${size}sqft £${oldPrice} -> £${newPrice}`);
                 }
             }
-        } else if (existing.currentPrices && existing.currentPrices[key]) {
-            newPrices[key] = existing.currentPrices[key];
         }
+    }
 
-        if (result.deals && result.deals.length > 0) {
-            const dealText = result.deals[0];
+    // Process deals
+    const providerKeys = ["metro", "access", "urban", "safestore", "bigyellow"];
+    for (const key of providerKeys) {
+        const providerDeals = dailyDeals[key] || [];
+        if (providerDeals.length > 0) {
+            const dealText = providerDeals[0];
             const discountMatch = dealText.match(/(\d+)%/);
             const weeksMatch = dealText.match(/(\d+)\s*weeks?/i);
             const monthsMatch = dealText.match(/(\d+)\s*months?/i);
@@ -684,35 +684,63 @@ function buildDataFile(existing, scraped, today) {
             } else {
                 dealsHistory.push({ provider: key, text: dealText, firstSeen: today, lastSeen: today, active: true });
             }
+        } else if (existing.currentDeals?.[key]) {
+            newDeals[key] = existing.currentDeals[key]; // Keep existing deal info
         } else {
             newDeals[key] = { active: false, text: "No current deal detected", discountPct: 0, maxWeeks: 0, firstSeen: null, lastSeen: null };
-            dealsHistory.forEach(d => { if (d.provider === key && d.active) { d.active = false; d.lastSeen = today; } });
         }
     }
 
+    // Build scrape status
     const scrapeStatus = {};
-    for (const [key, result] of Object.entries(scraped)) {
-        const pricesFound = result.prices ? Object.keys(result.prices).length : 0;
+    for (const key of providerKeys) {
+        const sources = [];
+        const aggCount = aggregatorPrices[key] ? Object.keys(aggregatorPrices[key]).length : 0;
+        const quoteCount = quotePrices[key] ? Object.keys(quotePrices[key]).length : 0;
+        const emailCount = emailPrices[key] ? Object.keys(emailPrices[key]).length : 0;
+
+        if (aggCount > 0) sources.push(`aggregator:${aggCount}`);
+        if (quoteCount > 0) sources.push(`quote-form:${quoteCount}`);
+        if (emailCount > 0) sources.push(`email:${emailCount}`);
+
+        const totalNew = aggCount + quoteCount + emailCount;
+        const totalSizes = mergedPrices[key] ? Object.keys(mergedPrices[key]).length : 0;
+
         let status, message;
-        if (result.error) { status = "failed"; message = `Scrape error: ${result.error.substring(0, 80)}`; }
-        else if (pricesFound >= 5) { status = "ok"; message = "All sizes scraped successfully"; }
-        else if (pricesFound > 0) { status = "partial"; message = `Only ${pricesFound}/5 sizes found`; }
-        else { status = "failed"; message = "No prices extracted - quote form may need adjustment"; }
+        if (key === "metro") {
+            status = "ok"; message = "Internal price sheet";
+        } else if (totalNew > 0) {
+            status = totalSizes >= 5 ? "ok" : "partial";
+            message = `Sources: ${sources.join(", ")} (${totalSizes}/5 sizes)`;
+        } else if (totalSizes > 0) {
+            status = "partial";
+            message = "Using cached prices - no new data today";
+        } else {
+            status = "failed";
+            message = "No prices available";
+        }
+
         scrapeStatus[key] = {
             status,
-            lastSuccess: pricesFound > 0 ? today : (existing.scrapeStatus?.[key]?.lastSuccess || null),
-            pricesFound, message
+            lastSuccess: totalNew > 0 ? today : (existing.scrapeStatus?.[key]?.lastSuccess || null),
+            pricesFound: totalSizes,
+            message
         };
     }
 
+    // Update history
     const history = [...(existing.priceHistory || [])];
-    if (!history.find(h => h.date === today)) {
-        history.push({ date: today, prices: { ...newPrices } });
+    const existingToday = history.findIndex(h => h.date === today);
+    if (existingToday >= 0) {
+        history[existingToday].prices = { ...mergedPrices };
+    } else {
+        history.push({ date: today, prices: { ...mergedPrices } });
     }
     const yearAgo = new Date();
     yearAgo.setFullYear(yearAgo.getFullYear() - 1);
     const filteredHistory = history.filter(h => new Date(h.date) >= yearAgo);
 
+    // Read PROVIDERS block from existing file
     const existingContent = fs.readFileSync(DATA_FILE, "utf-8");
     const providersMatch = existingContent.match(/const PROVIDERS = \{[\s\S]*?\n\};/);
     const providersBlock = providersMatch ? providersMatch[0] : "";
@@ -727,7 +755,7 @@ ${providersBlock}
 
 // Current prices per week in GBP, keyed by provider then size (sqft)
 // Last updated: ${today}
-const CURRENT_PRICES = ${JSON.stringify(newPrices, null, 4)};
+const CURRENT_PRICES = ${JSON.stringify(mergedPrices, null, 4)};
 
 // Active deals & offers
 const CURRENT_DEALS = ${JSON.stringify(newDeals, null, 4)};
@@ -747,9 +775,9 @@ const SCRAPE_STATUS = ${JSON.stringify(scrapeStatus, null, 4)};
 // Metadata
 const DATA_META = {
     lastScraped: "${new Date().toISOString()}",
-    scraperVersion: "3.0.0",
+    scraperVersion: "4.0.0",
     location: "Islington, N1",
-    note: "Auto-generated by scraper"
+    note: "Auto-generated by scraper. Aggregator daily, quotes weekly (Mondays)."
 };
 `;
 }
