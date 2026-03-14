@@ -48,253 +48,754 @@ const PROVIDERS = {
 };
 
 // Current prices per week in GBP, keyed by provider then size (sqft)
-// Last updated: 2026-03-14 (sample data - will be replaced by scraper)
+// Last updated: 2026-03-14
 const CURRENT_PRICES = {
-    metro:     { 25: 28.00, 50: 48.00, 75: 65.00, 100: 82.00, 150: 115.00 },
-    access:    { 25: 32.50, 50: 55.00, 75: 72.00, 100: 92.00, 150: 130.00 },
-    urban:     { 25: 30.00, 50: 52.00, 75: 69.00, 100: 88.00, 150: 125.00 },
-    safestore: { 25: 35.00, 50: 58.00, 75: 78.00, 100: 98.00, 150: 140.00 },
-    bigyellow: { 25: 38.00, 50: 62.00, 75: 82.00, 100: 105.00, 150: 148.00 }
+    "metro": {
+        "25": 28,
+        "50": 48,
+        "75": 65,
+        "100": 82,
+        "150": 115
+    },
+    "access": {
+        "25": 32.5,
+        "50": 55,
+        "75": 72,
+        "100": 92,
+        "150": 130
+    },
+    "urban": {
+        "25": 30,
+        "50": 52,
+        "75": 69,
+        "100": 88,
+        "150": 125
+    },
+    "safestore": {
+        "25": 35,
+        "50": 58,
+        "75": 78,
+        "100": 98,
+        "150": 140
+    },
+    "bigyellow": {
+        "25": 38,
+        "50": 62,
+        "75": 82,
+        "100": 105,
+        "150": 148
+    }
 };
 
 // Active deals & offers
 const CURRENT_DEALS = {
-    metro: {
-        active: true,
-        text: "50% off for up to 12 weeks",
-        discountPct: 50,
-        maxWeeks: 12,
-        firstSeen: "2026-02-01",
-        lastSeen: "2026-03-14"
+    "metro": {
+        "active": true,
+        "text": "50% off your first 8 weeks\n\nAddress:\n27 Maryland Walk, Islington, London N1 8QZ\n\nExact location using What 3 Words:\nladder.",
+        "discountPct": 50,
+        "maxWeeks": 8,
+        "firstSeen": "2026-03-14",
+        "lastSeen": "2026-03-14"
     },
-    access: {
-        active: true,
-        text: "50% off up to 13 weeks storage",
-        discountPct: 50,
-        maxWeeks: 13,
-        firstSeen: "2026-01-15",
-        lastSeen: "2026-03-14"
+    "access": {
+        "active": true,
+        "text": "50% off up to 13 weeks storage\n\nat Access Self Storage Islington\n\n4.",
+        "discountPct": 50,
+        "maxWeeks": 13,
+        "firstSeen": "2026-03-14",
+        "lastSeen": "2026-03-14"
     },
-    urban: {
-        active: true,
-        text: "50% off your first 2 months + Price Match Guarantee",
-        discountPct: 50,
-        maxWeeks: 8,
-        firstSeen: "2026-02-10",
-        lastSeen: "2026-03-14"
+    "urban": {
+        "active": true,
+        "text": "50% off your first two months!",
+        "discountPct": 50,
+        "maxWeeks": 0,
+        "firstSeen": "2026-03-14",
+        "lastSeen": "2026-03-14"
     },
-    safestore: {
-        active: true,
-        text: "50% off for first 8 weeks",
-        discountPct: 50,
-        maxWeeks: 8,
-        firstSeen: "2026-03-01",
-        lastSeen: "2026-03-14"
+    "safestore": {
+        "active": true,
+        "text": "Lowest Price Guarantee*",
+        "discountPct": 0,
+        "maxWeeks": 0,
+        "firstSeen": "2026-03-14",
+        "lastSeen": "2026-03-14"
     },
-    bigyellow: {
-        active: false,
-        text: "No current deal detected",
-        discountPct: 0,
-        maxWeeks: 0,
-        firstSeen: null,
-        lastSeen: null
+    "bigyellow": {
+        "active": false,
+        "text": "No current deal detected",
+        "discountPct": 0,
+        "maxWeeks": 0,
+        "firstSeen": null,
+        "lastSeen": null
     }
 };
 
-// Historical price data - array of snapshots
-// Each entry: { date: "YYYY-MM-DD", prices: { provider: { size: price } } }
+// Historical price data
 const PRICE_HISTORY = [
     {
-        date: "2026-01-06",
-        prices: {
-            metro:     { 25: 28.00, 50: 48.00, 75: 65.00, 100: 82.00, 150: 115.00 },
-            access:    { 25: 30.00, 50: 52.00, 75: 70.00, 100: 89.00, 150: 126.00 },
-            urban:     { 25: 29.00, 50: 50.00, 75: 67.00, 100: 85.00, 150: 120.00 },
-            safestore: { 25: 33.00, 50: 55.00, 75: 74.00, 100: 94.00, 150: 135.00 },
-            bigyellow: { 25: 36.00, 50: 60.00, 75: 80.00, 100: 102.00, 150: 145.00 }
+        "date": "2026-01-06",
+        "prices": {
+            "metro": {
+                "25": 28,
+                "50": 48,
+                "75": 65,
+                "100": 82,
+                "150": 115
+            },
+            "access": {
+                "25": 30,
+                "50": 52,
+                "75": 70,
+                "100": 89,
+                "150": 126
+            },
+            "urban": {
+                "25": 29,
+                "50": 50,
+                "75": 67,
+                "100": 85,
+                "150": 120
+            },
+            "safestore": {
+                "25": 33,
+                "50": 55,
+                "75": 74,
+                "100": 94,
+                "150": 135
+            },
+            "bigyellow": {
+                "25": 36,
+                "50": 60,
+                "75": 80,
+                "100": 102,
+                "150": 145
+            }
         }
     },
     {
-        date: "2026-01-13",
-        prices: {
-            metro:     { 25: 28.00, 50: 48.00, 75: 65.00, 100: 82.00, 150: 115.00 },
-            access:    { 25: 30.00, 50: 52.00, 75: 70.00, 100: 89.00, 150: 126.00 },
-            urban:     { 25: 29.00, 50: 50.00, 75: 67.00, 100: 85.00, 150: 120.00 },
-            safestore: { 25: 33.00, 50: 55.00, 75: 74.00, 100: 94.00, 150: 135.00 },
-            bigyellow: { 25: 36.00, 50: 60.00, 75: 80.00, 100: 102.00, 150: 145.00 }
+        "date": "2026-01-13",
+        "prices": {
+            "metro": {
+                "25": 28,
+                "50": 48,
+                "75": 65,
+                "100": 82,
+                "150": 115
+            },
+            "access": {
+                "25": 30,
+                "50": 52,
+                "75": 70,
+                "100": 89,
+                "150": 126
+            },
+            "urban": {
+                "25": 29,
+                "50": 50,
+                "75": 67,
+                "100": 85,
+                "150": 120
+            },
+            "safestore": {
+                "25": 33,
+                "50": 55,
+                "75": 74,
+                "100": 94,
+                "150": 135
+            },
+            "bigyellow": {
+                "25": 36,
+                "50": 60,
+                "75": 80,
+                "100": 102,
+                "150": 145
+            }
         }
     },
     {
-        date: "2026-01-20",
-        prices: {
-            metro:     { 25: 28.00, 50: 48.00, 75: 65.00, 100: 82.00, 150: 115.00 },
-            access:    { 25: 31.00, 50: 53.00, 75: 70.00, 100: 90.00, 150: 127.00 },
-            urban:     { 25: 29.00, 50: 50.00, 75: 67.00, 100: 85.00, 150: 120.00 },
-            safestore: { 25: 34.00, 50: 56.00, 75: 75.00, 100: 95.00, 150: 136.00 },
-            bigyellow: { 25: 36.00, 50: 60.00, 75: 80.00, 100: 102.00, 150: 145.00 }
+        "date": "2026-01-20",
+        "prices": {
+            "metro": {
+                "25": 28,
+                "50": 48,
+                "75": 65,
+                "100": 82,
+                "150": 115
+            },
+            "access": {
+                "25": 31,
+                "50": 53,
+                "75": 70,
+                "100": 90,
+                "150": 127
+            },
+            "urban": {
+                "25": 29,
+                "50": 50,
+                "75": 67,
+                "100": 85,
+                "150": 120
+            },
+            "safestore": {
+                "25": 34,
+                "50": 56,
+                "75": 75,
+                "100": 95,
+                "150": 136
+            },
+            "bigyellow": {
+                "25": 36,
+                "50": 60,
+                "75": 80,
+                "100": 102,
+                "150": 145
+            }
         }
     },
     {
-        date: "2026-01-27",
-        prices: {
-            metro:     { 25: 28.00, 50: 48.00, 75: 65.00, 100: 82.00, 150: 115.00 },
-            access:    { 25: 31.00, 50: 53.00, 75: 71.00, 100: 90.00, 150: 128.00 },
-            urban:     { 25: 30.00, 50: 51.00, 75: 68.00, 100: 86.00, 150: 122.00 },
-            safestore: { 25: 34.00, 50: 56.00, 75: 76.00, 100: 95.00, 150: 137.00 },
-            bigyellow: { 25: 37.00, 50: 61.00, 75: 81.00, 100: 103.00, 150: 146.00 }
+        "date": "2026-01-27",
+        "prices": {
+            "metro": {
+                "25": 28,
+                "50": 48,
+                "75": 65,
+                "100": 82,
+                "150": 115
+            },
+            "access": {
+                "25": 31,
+                "50": 53,
+                "75": 71,
+                "100": 90,
+                "150": 128
+            },
+            "urban": {
+                "25": 30,
+                "50": 51,
+                "75": 68,
+                "100": 86,
+                "150": 122
+            },
+            "safestore": {
+                "25": 34,
+                "50": 56,
+                "75": 76,
+                "100": 95,
+                "150": 137
+            },
+            "bigyellow": {
+                "25": 37,
+                "50": 61,
+                "75": 81,
+                "100": 103,
+                "150": 146
+            }
         }
     },
     {
-        date: "2026-02-03",
-        prices: {
-            metro:     { 25: 28.00, 50: 48.00, 75: 65.00, 100: 82.00, 150: 115.00 },
-            access:    { 25: 32.00, 50: 54.00, 75: 71.00, 100: 91.00, 150: 128.00 },
-            urban:     { 25: 30.00, 50: 51.00, 75: 68.00, 100: 87.00, 150: 123.00 },
-            safestore: { 25: 34.00, 50: 57.00, 75: 76.00, 100: 96.00, 150: 138.00 },
-            bigyellow: { 25: 37.00, 50: 61.00, 75: 81.00, 100: 104.00, 150: 146.00 }
+        "date": "2026-02-03",
+        "prices": {
+            "metro": {
+                "25": 28,
+                "50": 48,
+                "75": 65,
+                "100": 82,
+                "150": 115
+            },
+            "access": {
+                "25": 32,
+                "50": 54,
+                "75": 71,
+                "100": 91,
+                "150": 128
+            },
+            "urban": {
+                "25": 30,
+                "50": 51,
+                "75": 68,
+                "100": 87,
+                "150": 123
+            },
+            "safestore": {
+                "25": 34,
+                "50": 57,
+                "75": 76,
+                "100": 96,
+                "150": 138
+            },
+            "bigyellow": {
+                "25": 37,
+                "50": 61,
+                "75": 81,
+                "100": 104,
+                "150": 146
+            }
         }
     },
     {
-        date: "2026-02-10",
-        prices: {
-            metro:     { 25: 28.00, 50: 48.00, 75: 65.00, 100: 82.00, 150: 115.00 },
-            access:    { 25: 32.00, 50: 54.00, 75: 72.00, 100: 91.00, 150: 129.00 },
-            urban:     { 25: 30.00, 50: 52.00, 75: 69.00, 100: 88.00, 150: 125.00 },
-            safestore: { 25: 35.00, 50: 57.00, 75: 77.00, 100: 97.00, 150: 139.00 },
-            bigyellow: { 25: 38.00, 50: 62.00, 75: 82.00, 100: 105.00, 150: 148.00 }
+        "date": "2026-02-10",
+        "prices": {
+            "metro": {
+                "25": 28,
+                "50": 48,
+                "75": 65,
+                "100": 82,
+                "150": 115
+            },
+            "access": {
+                "25": 32,
+                "50": 54,
+                "75": 72,
+                "100": 91,
+                "150": 129
+            },
+            "urban": {
+                "25": 30,
+                "50": 52,
+                "75": 69,
+                "100": 88,
+                "150": 125
+            },
+            "safestore": {
+                "25": 35,
+                "50": 57,
+                "75": 77,
+                "100": 97,
+                "150": 139
+            },
+            "bigyellow": {
+                "25": 38,
+                "50": 62,
+                "75": 82,
+                "100": 105,
+                "150": 148
+            }
         }
     },
     {
-        date: "2026-02-17",
-        prices: {
-            metro:     { 25: 28.00, 50: 48.00, 75: 65.00, 100: 82.00, 150: 115.00 },
-            access:    { 25: 32.00, 50: 54.00, 75: 72.00, 100: 91.00, 150: 129.00 },
-            urban:     { 25: 30.00, 50: 52.00, 75: 69.00, 100: 88.00, 150: 125.00 },
-            safestore: { 25: 35.00, 50: 57.00, 75: 77.00, 100: 97.00, 150: 139.00 },
-            bigyellow: { 25: 38.00, 50: 62.00, 75: 82.00, 100: 105.00, 150: 148.00 }
+        "date": "2026-02-17",
+        "prices": {
+            "metro": {
+                "25": 28,
+                "50": 48,
+                "75": 65,
+                "100": 82,
+                "150": 115
+            },
+            "access": {
+                "25": 32,
+                "50": 54,
+                "75": 72,
+                "100": 91,
+                "150": 129
+            },
+            "urban": {
+                "25": 30,
+                "50": 52,
+                "75": 69,
+                "100": 88,
+                "150": 125
+            },
+            "safestore": {
+                "25": 35,
+                "50": 57,
+                "75": 77,
+                "100": 97,
+                "150": 139
+            },
+            "bigyellow": {
+                "25": 38,
+                "50": 62,
+                "75": 82,
+                "100": 105,
+                "150": 148
+            }
         }
     },
     {
-        date: "2026-02-24",
-        prices: {
-            metro:     { 25: 28.00, 50: 48.00, 75: 65.00, 100: 82.00, 150: 115.00 },
-            access:    { 25: 32.50, 50: 55.00, 75: 72.00, 100: 92.00, 150: 130.00 },
-            urban:     { 25: 30.00, 50: 52.00, 75: 69.00, 100: 88.00, 150: 125.00 },
-            safestore: { 25: 35.00, 50: 58.00, 75: 78.00, 100: 98.00, 150: 140.00 },
-            bigyellow: { 25: 38.00, 50: 62.00, 75: 82.00, 100: 105.00, 150: 148.00 }
+        "date": "2026-02-24",
+        "prices": {
+            "metro": {
+                "25": 28,
+                "50": 48,
+                "75": 65,
+                "100": 82,
+                "150": 115
+            },
+            "access": {
+                "25": 32.5,
+                "50": 55,
+                "75": 72,
+                "100": 92,
+                "150": 130
+            },
+            "urban": {
+                "25": 30,
+                "50": 52,
+                "75": 69,
+                "100": 88,
+                "150": 125
+            },
+            "safestore": {
+                "25": 35,
+                "50": 58,
+                "75": 78,
+                "100": 98,
+                "150": 140
+            },
+            "bigyellow": {
+                "25": 38,
+                "50": 62,
+                "75": 82,
+                "100": 105,
+                "150": 148
+            }
         }
     },
     {
-        date: "2026-03-03",
-        prices: {
-            metro:     { 25: 28.00, 50: 48.00, 75: 65.00, 100: 82.00, 150: 115.00 },
-            access:    { 25: 32.50, 50: 55.00, 75: 72.00, 100: 92.00, 150: 130.00 },
-            urban:     { 25: 30.00, 50: 52.00, 75: 69.00, 100: 88.00, 150: 125.00 },
-            safestore: { 25: 35.00, 50: 58.00, 75: 78.00, 100: 98.00, 150: 140.00 },
-            bigyellow: { 25: 38.00, 50: 62.00, 75: 82.00, 100: 105.00, 150: 148.00 }
+        "date": "2026-03-03",
+        "prices": {
+            "metro": {
+                "25": 28,
+                "50": 48,
+                "75": 65,
+                "100": 82,
+                "150": 115
+            },
+            "access": {
+                "25": 32.5,
+                "50": 55,
+                "75": 72,
+                "100": 92,
+                "150": 130
+            },
+            "urban": {
+                "25": 30,
+                "50": 52,
+                "75": 69,
+                "100": 88,
+                "150": 125
+            },
+            "safestore": {
+                "25": 35,
+                "50": 58,
+                "75": 78,
+                "100": 98,
+                "150": 140
+            },
+            "bigyellow": {
+                "25": 38,
+                "50": 62,
+                "75": 82,
+                "100": 105,
+                "150": 148
+            }
         }
     },
     {
-        date: "2026-03-10",
-        prices: {
-            metro:     { 25: 28.00, 50: 48.00, 75: 65.00, 100: 82.00, 150: 115.00 },
-            access:    { 25: 32.50, 50: 55.00, 75: 72.00, 100: 92.00, 150: 130.00 },
-            urban:     { 25: 30.00, 50: 52.00, 75: 69.00, 100: 88.00, 150: 125.00 },
-            safestore: { 25: 35.00, 50: 58.00, 75: 78.00, 100: 98.00, 150: 140.00 },
-            bigyellow: { 25: 38.00, 50: 62.00, 75: 82.00, 100: 105.00, 150: 148.00 }
+        "date": "2026-03-10",
+        "prices": {
+            "metro": {
+                "25": 28,
+                "50": 48,
+                "75": 65,
+                "100": 82,
+                "150": 115
+            },
+            "access": {
+                "25": 32.5,
+                "50": 55,
+                "75": 72,
+                "100": 92,
+                "150": 130
+            },
+            "urban": {
+                "25": 30,
+                "50": 52,
+                "75": 69,
+                "100": 88,
+                "150": 125
+            },
+            "safestore": {
+                "25": 35,
+                "50": 58,
+                "75": 78,
+                "100": 98,
+                "150": 140
+            },
+            "bigyellow": {
+                "25": 38,
+                "50": 62,
+                "75": 82,
+                "100": 105,
+                "150": 148
+            }
         }
     },
     {
-        date: "2026-03-14",
-        prices: {
-            metro:     { 25: 28.00, 50: 48.00, 75: 65.00, 100: 82.00, 150: 115.00 },
-            access:    { 25: 32.50, 50: 55.00, 75: 72.00, 100: 92.00, 150: 130.00 },
-            urban:     { 25: 30.00, 50: 52.00, 75: 69.00, 100: 88.00, 150: 125.00 },
-            safestore: { 25: 35.00, 50: 58.00, 75: 78.00, 100: 98.00, 150: 140.00 },
-            bigyellow: { 25: 38.00, 50: 62.00, 75: 82.00, 100: 105.00, 150: 148.00 }
+        "date": "2026-03-14",
+        "prices": {
+            "metro": {
+                "25": 28,
+                "50": 48,
+                "75": 65,
+                "100": 82,
+                "150": 115
+            },
+            "access": {
+                "25": 32.5,
+                "50": 55,
+                "75": 72,
+                "100": 92,
+                "150": 130
+            },
+            "urban": {
+                "25": 30,
+                "50": 52,
+                "75": 69,
+                "100": 88,
+                "150": 125
+            },
+            "safestore": {
+                "25": 35,
+                "50": 58,
+                "75": 78,
+                "100": 98,
+                "150": 140
+            },
+            "bigyellow": {
+                "25": 38,
+                "50": 62,
+                "75": 82,
+                "100": 105,
+                "150": 148
+            }
         }
     }
 ];
 
-// Price change log - auto-generated when scraper detects changes
+// Price change log
 const PRICE_CHANGES = [
-    { date: "2026-01-20", provider: "access", size: 25, oldPrice: 30.00, newPrice: 31.00 },
-    { date: "2026-01-20", provider: "access", size: 50, oldPrice: 52.00, newPrice: 53.00 },
-    { date: "2026-01-20", provider: "safestore", size: 25, oldPrice: 33.00, newPrice: 34.00 },
-    { date: "2026-01-20", provider: "safestore", size: 50, oldPrice: 55.00, newPrice: 56.00 },
-    { date: "2026-01-27", provider: "urban", size: 25, oldPrice: 29.00, newPrice: 30.00 },
-    { date: "2026-01-27", provider: "urban", size: 50, oldPrice: 50.00, newPrice: 51.00 },
-    { date: "2026-01-27", provider: "bigyellow", size: 50, oldPrice: 60.00, newPrice: 61.00 },
-    { date: "2026-02-03", provider: "access", size: 50, oldPrice: 53.00, newPrice: 54.00 },
-    { date: "2026-02-10", provider: "urban", size: 50, oldPrice: 51.00, newPrice: 52.00 },
-    { date: "2026-02-10", provider: "safestore", size: 25, oldPrice: 34.00, newPrice: 35.00 },
-    { date: "2026-02-10", provider: "bigyellow", size: 25, oldPrice: 37.00, newPrice: 38.00 },
-    { date: "2026-02-10", provider: "bigyellow", size: 50, oldPrice: 61.00, newPrice: 62.00 },
-    { date: "2026-02-24", provider: "access", size: 25, oldPrice: 32.00, newPrice: 32.50 },
-    { date: "2026-02-24", provider: "access", size: 50, oldPrice: 54.00, newPrice: 55.00 },
-    { date: "2026-02-24", provider: "safestore", size: 50, oldPrice: 57.00, newPrice: 58.00 }
+    {
+        "date": "2026-01-20",
+        "provider": "access",
+        "size": 25,
+        "oldPrice": 30,
+        "newPrice": 31
+    },
+    {
+        "date": "2026-01-20",
+        "provider": "access",
+        "size": 50,
+        "oldPrice": 52,
+        "newPrice": 53
+    },
+    {
+        "date": "2026-01-20",
+        "provider": "safestore",
+        "size": 25,
+        "oldPrice": 33,
+        "newPrice": 34
+    },
+    {
+        "date": "2026-01-20",
+        "provider": "safestore",
+        "size": 50,
+        "oldPrice": 55,
+        "newPrice": 56
+    },
+    {
+        "date": "2026-01-27",
+        "provider": "urban",
+        "size": 25,
+        "oldPrice": 29,
+        "newPrice": 30
+    },
+    {
+        "date": "2026-01-27",
+        "provider": "urban",
+        "size": 50,
+        "oldPrice": 50,
+        "newPrice": 51
+    },
+    {
+        "date": "2026-01-27",
+        "provider": "bigyellow",
+        "size": 50,
+        "oldPrice": 60,
+        "newPrice": 61
+    },
+    {
+        "date": "2026-02-03",
+        "provider": "access",
+        "size": 50,
+        "oldPrice": 53,
+        "newPrice": 54
+    },
+    {
+        "date": "2026-02-10",
+        "provider": "urban",
+        "size": 50,
+        "oldPrice": 51,
+        "newPrice": 52
+    },
+    {
+        "date": "2026-02-10",
+        "provider": "safestore",
+        "size": 25,
+        "oldPrice": 34,
+        "newPrice": 35
+    },
+    {
+        "date": "2026-02-10",
+        "provider": "bigyellow",
+        "size": 25,
+        "oldPrice": 37,
+        "newPrice": 38
+    },
+    {
+        "date": "2026-02-10",
+        "provider": "bigyellow",
+        "size": 50,
+        "oldPrice": 61,
+        "newPrice": 62
+    },
+    {
+        "date": "2026-02-24",
+        "provider": "access",
+        "size": 25,
+        "oldPrice": 32,
+        "newPrice": 32.5
+    },
+    {
+        "date": "2026-02-24",
+        "provider": "access",
+        "size": 50,
+        "oldPrice": 54,
+        "newPrice": 55
+    },
+    {
+        "date": "2026-02-24",
+        "provider": "safestore",
+        "size": 50,
+        "oldPrice": 57,
+        "newPrice": 58
+    }
 ];
 
-// Deals history - tracks when deals appear and disappear
+// Deals history
 const DEALS_HISTORY = [
     {
-        provider: "metro",
-        text: "50% off for up to 12 weeks",
-        firstSeen: "2026-02-01",
-        lastSeen: "2026-03-14",
-        active: true
+        "provider": "metro",
+        "text": "50% off for up to 12 weeks",
+        "firstSeen": "2026-02-01",
+        "lastSeen": "2026-03-14",
+        "active": true
     },
     {
-        provider: "access",
-        text: "50% off up to 13 weeks storage",
-        firstSeen: "2026-01-15",
-        lastSeen: "2026-03-14",
-        active: true
+        "provider": "access",
+        "text": "50% off up to 13 weeks storage",
+        "firstSeen": "2026-01-15",
+        "lastSeen": "2026-03-14",
+        "active": true
     },
     {
-        provider: "urban",
-        text: "50% off your first 2 months + Price Match Guarantee",
-        firstSeen: "2026-02-10",
-        lastSeen: "2026-03-14",
-        active: true
+        "provider": "urban",
+        "text": "50% off your first 2 months + Price Match Guarantee",
+        "firstSeen": "2026-02-10",
+        "lastSeen": "2026-03-14",
+        "active": true
     },
     {
-        provider: "safestore",
-        text: "First 8 weeks free on selected units",
-        firstSeen: "2025-11-15",
-        lastSeen: "2026-01-10",
-        active: false
+        "provider": "safestore",
+        "text": "First 8 weeks free on selected units",
+        "firstSeen": "2025-11-15",
+        "lastSeen": "2026-01-10",
+        "active": false
     },
     {
-        provider: "safestore",
-        text: "50% off for first 8 weeks",
-        firstSeen: "2026-03-01",
-        lastSeen: "2026-03-14",
-        active: true
+        "provider": "safestore",
+        "text": "50% off for first 8 weeks",
+        "firstSeen": "2026-03-01",
+        "lastSeen": "2026-03-14",
+        "active": true
     },
     {
-        provider: "bigyellow",
-        text: "25% off first 3 months",
-        firstSeen: "2025-12-01",
-        lastSeen: "2026-01-31",
-        active: false
+        "provider": "bigyellow",
+        "text": "25% off first 3 months",
+        "firstSeen": "2025-12-01",
+        "lastSeen": "2026-01-31",
+        "active": false
+    },
+    {
+        "provider": "metro",
+        "text": "50% off your first 8 weeks\n\nAddress:\n27 Maryland Walk, Islington, London N1 8QZ\n\nExact location using What 3 Words:\nladder.",
+        "firstSeen": "2026-03-14",
+        "lastSeen": "2026-03-14",
+        "active": true
+    },
+    {
+        "provider": "access",
+        "text": "50% off up to 13 weeks storage\n\nat Access Self Storage Islington\n\n4.",
+        "firstSeen": "2026-03-14",
+        "lastSeen": "2026-03-14",
+        "active": true
+    },
+    {
+        "provider": "urban",
+        "text": "50% off your first two months!",
+        "firstSeen": "2026-03-14",
+        "lastSeen": "2026-03-14",
+        "active": true
+    },
+    {
+        "provider": "safestore",
+        "text": "Lowest Price Guarantee*",
+        "firstSeen": "2026-03-14",
+        "lastSeen": "2026-03-14",
+        "active": true
     }
 ];
 
-// Scrape status - tracks whether each provider's prices were successfully scraped
-// "ok" = prices extracted, "partial" = some sizes missing, "failed" = no prices extracted
+// Scrape status
 const SCRAPE_STATUS = {
-    metro:     { status: "sample", lastSuccess: "2026-03-14", pricesFound: 5, message: "Sample data - awaiting first real scrape" },
-    access:    { status: "sample", lastSuccess: "2026-03-14", pricesFound: 5, message: "Sample data - awaiting first real scrape" },
-    urban:     { status: "sample", lastSuccess: "2026-03-14", pricesFound: 5, message: "Sample data - awaiting first real scrape" },
-    safestore: { status: "sample", lastSuccess: "2026-03-14", pricesFound: 5, message: "Sample data - awaiting first real scrape" },
-    bigyellow: { status: "sample", lastSuccess: "2026-03-14", pricesFound: 5, message: "Sample data - awaiting first real scrape" }
+    "metro": {
+        "status": "failed",
+        "lastSuccess": "2026-03-14",
+        "pricesFound": 0,
+        "message": "No prices extracted - site may be blocking or layout changed"
+    },
+    "access": {
+        "status": "failed",
+        "lastSuccess": "2026-03-14",
+        "pricesFound": 0,
+        "message": "No prices extracted - site may be blocking or layout changed"
+    },
+    "urban": {
+        "status": "failed",
+        "lastSuccess": "2026-03-14",
+        "pricesFound": 0,
+        "message": "No prices extracted - site may be blocking or layout changed"
+    },
+    "safestore": {
+        "status": "failed",
+        "lastSuccess": "2026-03-14",
+        "pricesFound": 0,
+        "message": "No prices extracted - site may be blocking or layout changed"
+    },
+    "bigyellow": {
+        "status": "failed",
+        "lastSuccess": "2026-03-14",
+        "pricesFound": 0,
+        "message": "No prices extracted - site may be blocking or layout changed"
+    }
 };
 
 // Metadata
 const DATA_META = {
-    lastScraped: "2026-03-14T08:30:00Z",
+    lastScraped: "2026-03-14T10:11:40.417Z",
     scraperVersion: "1.0.0",
     location: "Islington, N1",
-    note: "Sample data - prices are illustrative. Replace with real scraped data."
+    note: "Auto-generated by scraper"
 };
