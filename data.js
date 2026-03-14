@@ -52,8 +52,8 @@ const PROVIDERS = {
 // Sources: Metro = internal price sheet (Feb 2026)
 //          Access, Urban Locker = StorageLocator.co.uk (indicative, cached)
 //          Safestore = StorageLocator.co.uk (indicative, cached)
-//          Big Yellow = StorageLocator.co.uk (Kennington branch, scaled for KC premium)
-//          75 & 150 sqft interpolated where not directly available
+//          Big Yellow = Direct quote flow (all 5 sizes confirmed, Kings Cross)
+//          75 & 150 sqft interpolated for Access/Urban/Safestore where not directly available
 const CURRENT_PRICES = {
     "metro": {
         "25": 46.75,
@@ -84,11 +84,11 @@ const CURRENT_PRICES = {
         "150": 195.00
     },
     "bigyellow": {
-        "25": 59.99,
-        "50": 89.99,
-        "75": 119.99,
-        "100": 152.99,
-        "150": 212.99
+        "25": 37.80,
+        "50": 59.40,
+        "75": 80.70,
+        "100": 101.70,
+        "150": 190.50
     }
 };
 
@@ -128,7 +128,7 @@ const CURRENT_DEALS = {
     },
     "bigyellow": {
         "active": true,
-        "text": "50% off for up to 8 weeks + 5% off 24-week prepay",
+        "text": "50% off for first 8 weeks (standard rate £79.20/wk for 50sqft)",
         "discountPct": 50,
         "maxWeeks": 8,
         "firstSeen": "2026-03-14",
@@ -570,11 +570,11 @@ const PRICE_HISTORY = [
                 "150": 195.00
             },
             "bigyellow": {
-                "25": 59.99,
-                "50": 89.99,
-                "75": 119.99,
-                "100": 152.99,
-                "150": 212.99
+                "25": 37.80,
+                "50": 59.40,
+                "75": 80.70,
+                "100": 101.70,
+                "150": 190.50
             }
         }
     }
@@ -804,10 +804,10 @@ const SCRAPE_STATUS = {
         "message": "Via StorageLocator (25/50/100 sqft confirmed, 75/150 interpolated)"
     },
     "bigyellow": {
-        "status": "partial",
+        "status": "ok",
         "lastSuccess": "2026-03-14",
-        "pricesFound": 3,
-        "message": "Via StorageLocator (Kennington branch data, scaled for KC premium)"
+        "pricesFound": 5,
+        "message": "Direct quote flow — all 5 sizes confirmed (Kings Cross)"
     }
 };
 

@@ -217,6 +217,66 @@ function extractPricesFromEmailText(text) {
     return prices;
 }
 
+function extractBigYellowQuotePrice(text, size) {
+    const result = { size, standardPrice: null, ongoingPrice: null, introPrice: null, deal: null };
+    const lines = text.split("\n").map(l => l.trim()).filter(Boolean);
+
+    let inKingsXSection = false;
+    let pricesFound = [];
+
+    for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+
+        if (line.includes("Kings Cross") && line.includes(`${size} sq ft`) && line.includes("Room") && !line.includes("Ground floor")) {
+            inKingsXSection = true;
+            pricesFound = [];
+            continue;
+        }
+
+        if (inKingsXSection) {
+            const priceMatch = line.match(/^£(\d+\.\d{2})$/);
+            if (priceMatch) {
+                pricesFound.push(parseFloat(priceMatch[1]));
+            }
+
+            if (line.includes("per week for the first")) {
+                const weeksMatch = line.match(/first (\d+) weeks/);
+                result.introPrice = pricesFound[pricesFound.length - 1];
+                result.deal = `50% off for ${weeksMatch ? weeksMatch[1] : "?"} weeks`;
+            }
+
+            if (line.includes("per week thereafter")) {
+                result.ongoingPrice = pricesFound[pricesFound.length - 1];
+                if (pricesFound.length >= 3) {
+                    result.standardPrice = pricesFound[pricesFound.length - 2];
+                } else if (pricesFound.length >= 2 && !result.introPrice) {
+                    result.standardPrice = pricesFound[pricesFound.length - 2];
+                }
+                break;
+            }
+
+            if ((line.includes("Kennington") || line.includes("Wapping") || line.includes("nearby stores")) && pricesFound.length > 0) {
+                break;
+            }
+        }
+    }
+
+    if (!result.standardPrice && result.ongoingPrice) {
+        const discountMatch = text.match(/INCLUDES (\d+)% DISCOUNT/i);
+        if (discountMatch) {
+            const pct = parseInt(discountMatch[1]);
+            result.standardPrice = +(result.ongoingPrice / (1 - pct / 100)).toFixed(2);
+        }
+    }
+
+    if (!result.ongoingPrice && pricesFound.length > 0) {
+        result.introPrice = pricesFound[0];
+        if (pricesFound.length > 1) result.ongoingPrice = pricesFound[1];
+    }
+
+    return result;
+}
+
 async function tryClick(page, selectors) {
     for (const sel of selectors) {
         try {
@@ -376,9 +436,108 @@ async function scrapeDailyDeals(context) {
 }
 
 // ============================================================
+// BIG YELLOW DIRECT QUOTE FLOW (runs daily - extracts prices from quote page)
+// ============================================================
+async function scrapeBigYellowDirect(browser, identity) {
+    const prices = {};
+    const fakeEmail = `check.${Date.now()}@example.com`; // Not a real submission, just to reach quote page
+
+    for (const size of TARGET_SIZES) {
+        console.log(`  --- Big Yellow ${size} sq ft ---`);
+
+        const ctx = await browser.newContext({
+            userAgent: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+            viewport: { width: 1920, height: 1080 }, locale: "en-GB", timezoneId: "Europe/London"
+        });
+        await ctx.addInitScript(() => { Object.defineProperty(navigator, "webdriver", { get: () => false }); });
+        const page = await ctx.newPage();
+
+        try {
+            // Step 2: Load + select size
+            await page.goto("https://www.bigyellow.co.uk/quote/estimate/store/kings-cross/", {
+                waitUntil: "load", timeout: 60000
+            });
+            await page.waitForTimeout(12000);
+
+            await page.click('button:has-text("Accept All Cookies")', { force: true, timeout: 3000 }).catch(() => {});
+            await page.waitForTimeout(500);
+
+            await page.evaluate((s) => {
+                const slides = document.querySelectorAll("a.slick-slide:not(.slick-cloned)");
+                for (const el of slides) { if (el.innerText.includes(`${s} sq ft`)) { el.click(); break; } }
+            }, size);
+            await page.waitForTimeout(2000);
+
+            await page.evaluate(() => document.querySelector("button.btn-primary.btn-block")?.click());
+            await page.waitForTimeout(6000);
+
+            // Step 3: Storage details
+            await page.waitForFunction(() => typeof $ !== "undefined" && typeof $.fn.selectpicker !== "undefined", { timeout: 10000 }).catch(() => {});
+
+            await page.evaluate(() => {
+                if (typeof $ !== "undefined" && $.fn.selectpicker) {
+                    $('[name="enquiry_type"][value="domestic"]').prop('checked', true);
+                    $('#enquiry_reason').selectpicker('val', 'Moving');
+                    $('#whenNeedStorage').selectpicker('val', 'WNS2');
+                } else {
+                    const r = document.querySelector('#enquiry_reason');
+                    if (r) { r.value = 'Moving'; r.dispatchEvent(new Event('change', {bubbles:true})); }
+                    const w = document.querySelector('#whenNeedStorage');
+                    if (w) { w.value = 'WNS2'; w.dispatchEvent(new Event('change', {bubbles:true})); }
+                }
+            });
+            await page.waitForTimeout(1000);
+
+            const nav3 = page.waitForNavigation({ timeout: 15000 }).catch(() => null);
+            await page.evaluate(() => document.querySelector("#form_main")?.submit());
+            await nav3;
+            await page.waitForTimeout(3000);
+
+            // Step 4: Personal details
+            await page.fill('#name_first', identity.firstName).catch(() => {});
+            await page.fill('#name_last', identity.lastName).catch(() => {});
+            await page.fill('#email', fakeEmail).catch(() => {});
+            await page.fill('#phone1', identity.phone).catch(() => {});
+            await page.fill('#postcode', 'N1 8QZ').catch(() => {});
+            await page.waitForTimeout(1000);
+
+            // Step 5: View quote
+            const nav4 = page.waitForNavigation({ timeout: 20000 }).catch(() => null);
+            await page.click('button:has-text("View your quote")', { force: true, timeout: 5000 }).catch(async () => {
+                await page.evaluate(() => {
+                    const btns = document.querySelectorAll("button");
+                    for (const b of btns) { if (b.innerText.includes("quote")) { b.click(); break; } }
+                });
+            });
+            await nav4;
+            await page.waitForTimeout(8000);
+
+            const text = await page.evaluate(() => document.body?.innerText || "");
+            const result = extractBigYellowQuotePrice(text, size);
+
+            if (result.ongoingPrice) {
+                prices[size] = result.ongoingPrice;
+                console.log(`    ${size}sqft: £${result.ongoingPrice}/wk (standard: £${result.standardPrice || "?"}, intro: £${result.introPrice || "?"}/wk)`);
+            } else {
+                console.log(`    ${size}sqft: No price extracted`);
+            }
+
+            await screenshot(page, `bigyellow-${size}`);
+        } catch (err) {
+            console.log(`    ${size}sqft ERROR: ${err.message}`);
+        }
+
+        await ctx.close();
+        await new Promise(r => setTimeout(r, 3000));
+    }
+
+    return prices;
+}
+
+// ============================================================
 // QUOTE FORM SUBMITTERS (runs weekly only)
 // ============================================================
-async function submitQuoteForms(context, email, identity) {
+async function submitQuoteForms(context, email, identity, browser) {
     console.log(`\n--- Submitting quote forms (weekly) ---`);
     console.log(`  Identity: ${identity.firstName} ${identity.lastName}`);
     console.log(`  Email: ${email}`);
@@ -487,153 +646,7 @@ async function submitQuoteForms(context, email, identity) {
         console.log(`  Safestore error: ${err.message}`);
     }
 
-    // Big Yellow - uses Imperva Incapsula bot protection
-    // Strategy: go to quote estimate page, wait for JS challenge to resolve,
-    // then navigate the room selection flow to see prices
-    try {
-        console.log("\n  >> Big Yellow (Incapsula-protected)");
-        prices.bigyellow = {};
-        const page = await context.newPage();
-        const apiData = [];
-        interceptAll(page, apiData);
-
-        // Step 1: Hit the store page first to get past Incapsula challenge
-        console.log("    Step 1: Loading store page (waiting for Incapsula)...");
-        await page.goto("https://www.bigyellow.co.uk/kings-cross-self-storage-units", {
-            waitUntil: "domcontentloaded", timeout: 60000
-        });
-        // Wait longer for Incapsula JS challenge to complete
-        await page.waitForTimeout(15000);
-
-        // Check if we got past Incapsula
-        const pageTitle = await page.title();
-        const bodyText = await page.evaluate(() => document.body?.innerText || "");
-        console.log(`    Page title: ${pageTitle}`);
-
-        if (bodyText.includes("Pardon Our Interruption") || bodyText.includes("Incapsula")) {
-            console.log("    Still blocked by Incapsula - waiting longer...");
-            await page.waitForTimeout(15000);
-        }
-
-        // Accept cookies if we got through
-        await tryClick(page, ['#onetrust-accept-btn-handler', 'text=/accept.*cookie/i', 'text=/agree/i', 'text=/got it/i']);
-        await page.waitForTimeout(2000);
-
-        // Step 2: Navigate to the quote estimate page for Kings Cross
-        console.log("    Step 2: Navigating to quote estimate page...");
-        await page.goto("https://www.bigyellow.co.uk/quote/estimate/store/kings-cross/", {
-            waitUntil: "domcontentloaded", timeout: 60000
-        });
-        await page.waitForTimeout(10000);
-
-        // Screenshot the quote page
-        await screenshot(page, "bigyellow-quote");
-
-        const quoteText = await page.evaluate(() => document.body?.innerText || "");
-        console.log(`    Quote page length: ${quoteText.length} chars`);
-
-        // Extract any visible prices
-        const visiblePrices = extractPricesFromText(quoteText);
-        if (Object.keys(visiblePrices).length > 0) {
-            console.log(`    Visible prices: ${JSON.stringify(visiblePrices)}`);
-            Object.assign(prices.bigyellow, visiblePrices);
-        }
-
-        // Step 3: Try to interact with room selection
-        // Big Yellow quote flow: select room size -> see price -> enter details
-        console.log("    Step 3: Trying room size selection...");
-
-        // Look for room/size selection elements
-        for (const size of TARGET_SIZES) {
-            const clicked = await tryClick(page, [
-                `text="${size} sq ft"`, `text="${size}sq ft"`, `text="${size} sqft"`,
-                `[data-size="${size}"]`, `[data-sqft="${size}"]`, `[data-area="${size}"]`,
-                `text="${size}"`,
-            ]);
-            if (clicked) {
-                console.log(`    Clicked size ${size}`);
-                await page.waitForTimeout(3000);
-            }
-        }
-
-        // Try dropdown/slider for size
-        await trySelect(page, 'select[name*="size"], select[name*="room"], select[name*="area"]', '50');
-        await page.waitForTimeout(3000);
-
-        // Try filling in move-in date and duration (might unlock price display)
-        await tryFill(page, 'input[name*="date"], input[type="date"]', '2026-04-01');
-        await trySelect(page, 'select[name*="duration"], select[name*="length"], select[name*="period"]', '4');
-        await tryClick(page, [
-            'text=/see.*price/i', 'text=/get.*price/i', 'text=/calculate/i',
-            'text=/next/i', 'text=/continue/i', 'text=/show.*room/i',
-            'button[type="submit"]'
-        ]);
-        await page.waitForTimeout(5000);
-
-        // Check for prices after interaction
-        const afterText = await page.evaluate(() => document.body?.innerText || "");
-        const afterPrices = extractPricesFromText(afterText);
-        if (Object.keys(afterPrices).length > 0) {
-            console.log(`    Prices after interaction: ${JSON.stringify(afterPrices)}`);
-            Object.assign(prices.bigyellow, afterPrices);
-        }
-
-        // Also scan for any price-like patterns (£XX.XX per week)
-        const allPriceMatches = await page.evaluate(() => {
-            const text = document.body?.innerText || "";
-            const matches = [];
-            const re = /£\s*(\d+(?:\.\d{1,2})?)\s*(?:per\s+week|\/\s*w(?:ee)?k|pw|p\.w\.?|weekly)/gi;
-            let m;
-            while ((m = re.exec(text)) !== null) {
-                matches.push({ price: parseFloat(m[1]), context: text.substring(Math.max(0, m.index - 50), m.index + m[0].length + 50) });
-            }
-            return matches;
-        });
-        if (allPriceMatches.length > 0) {
-            console.log(`    Found ${allPriceMatches.length} price mentions:`);
-            allPriceMatches.forEach(m => console.log(`      £${m.price}/wk - "${m.context.trim()}"`));
-        }
-
-        // Step 4: Fill quote form if visible (for email response)
-        console.log("    Step 4: Submitting quote form for email...");
-        await tryFill(page, 'input[name*="name"], input[name*="first"], input[name*="Name"]', identity.firstName);
-        await tryFill(page, 'input[name*="last"], input[name*="Last"], input[name*="surname"]', identity.lastName);
-        await tryFill(page, 'input[name*="email"], input[name*="Email"], input[type="email"]', email);
-        await tryFill(page, 'input[name*="phone"], input[name*="Phone"], input[name*="tel"], input[type="tel"]', identity.phone);
-        await tryClick(page, [
-            'text=/get.*quote/i', 'text=/submit/i', 'text=/request/i',
-            'text=/send/i', 'button[type="submit"]'
-        ]);
-        await page.waitForTimeout(5000);
-
-        // Check intercepted API calls for pricing data
-        let jsonCount = 0;
-        for (const { url, body } of apiData) {
-            if (body.startsWith("{") || body.startsWith("[")) {
-                jsonCount++;
-                try {
-                    const json = JSON.parse(body);
-                    const apiPrices = extractPricesFromJSON(json);
-                    if (Object.keys(apiPrices).length > 0) {
-                        console.log(`    API prices from ${url.substring(0, 80)}: ${JSON.stringify(apiPrices)}`);
-                        Object.assign(prices.bigyellow, apiPrices);
-                    }
-                    // Log any response containing price-related keywords
-                    const jsonStr = JSON.stringify(json);
-                    if (jsonStr.includes("price") || jsonStr.includes("rate") || jsonStr.includes("weekly")) {
-                        console.log(`    API with pricing keywords: ${url.substring(0, 100)}`);
-                        console.log(`    Preview: ${jsonStr.substring(0, 300)}`);
-                    }
-                } catch {}
-            }
-        }
-        console.log(`    Total JSON API calls intercepted: ${jsonCount}/${apiData.length}`);
-
-        await screenshot(page, "bigyellow-final");
-        await page.close();
-    } catch (err) {
-        console.log(`  Big Yellow error: ${err.message}`);
-    }
+    // Big Yellow runs daily via scrapeBigYellowDirect() — not needed in weekly quotes
 
     return prices;
 }
@@ -676,6 +689,16 @@ async function main() {
     // --- DAILY: Deals from competitor sites ---
     const dailyDeals = await scrapeDailyDeals(context);
 
+    // --- DAILY: Big Yellow direct quote flow (no contact details needed to see prices) ---
+    let bigYellowPrices = {};
+    try {
+        console.log("\n--- Big Yellow quote flow (daily) ---");
+        bigYellowPrices = await scrapeBigYellowDirect(browser, getWeeklyIdentity());
+        console.log(`  Big Yellow prices: ${JSON.stringify(bigYellowPrices)}`);
+    } catch (err) {
+        console.log(`  Big Yellow daily flow error: ${err.message}`);
+    }
+
     // --- WEEKLY: Submit quote forms + check emails ---
     let quotePrices = {};
     let emailPrices = {};
@@ -687,7 +710,7 @@ async function main() {
         const tempEmail = await createTempEmail();
 
         if (tempEmail) {
-            quotePrices = await submitQuoteForms(context, tempEmail.address, identity);
+            quotePrices = await submitQuoteForms(context, tempEmail.address, identity, browser);
 
             // Wait 10 minutes for immediate auto-reply emails
             console.log("\n--- Waiting 10 minutes for quote emails ---");
@@ -714,7 +737,7 @@ async function main() {
 
     await browser.close();
 
-    // --- Merge all price sources (email > quote form > aggregator > existing) ---
+    // --- Merge all price sources (email > quote form > Big Yellow direct > aggregator > existing) ---
     const mergedPrices = {};
     const providerKeys = ["metro", "access", "urban", "safestore", "bigyellow"];
 
@@ -731,6 +754,11 @@ async function main() {
             Object.assign(mergedPrices[key], aggregatorPrices[key]);
         }
 
+        // Layer on Big Yellow direct prices (higher than aggregator)
+        if (key === "bigyellow" && Object.keys(bigYellowPrices).length > 0) {
+            Object.assign(mergedPrices[key], bigYellowPrices);
+        }
+
         // Layer on quote form prices (higher priority)
         if (quotePrices[key] && Object.keys(quotePrices[key]).length > 0) {
             Object.assign(mergedPrices[key], quotePrices[key]);
@@ -743,7 +771,7 @@ async function main() {
     }
 
     // Build the data file
-    const updatedData = buildDataFile(existingData, mergedPrices, dailyDeals, aggregatorPrices, quotePrices, emailPrices, today);
+    const updatedData = buildDataFile(existingData, mergedPrices, dailyDeals, aggregatorPrices, quotePrices, emailPrices, bigYellowPrices, today);
     fs.writeFileSync(DATA_FILE, updatedData, "utf-8");
     console.log(`\nData file updated: ${DATA_FILE}`);
     console.log("=== Done ===");
@@ -774,7 +802,7 @@ function readExistingData() {
     }
 }
 
-function buildDataFile(existing, mergedPrices, dailyDeals, aggregatorPrices, quotePrices, emailPrices, today) {
+function buildDataFile(existing, mergedPrices, dailyDeals, aggregatorPrices, quotePrices, emailPrices, bigYellowPrices, today) {
     const newChanges = [...(existing.priceChanges || [])];
     const newDeals = {};
     const dealsHistory = [...(existing.dealsHistory || [])];
@@ -828,8 +856,10 @@ function buildDataFile(existing, mergedPrices, dailyDeals, aggregatorPrices, quo
         const aggCount = aggregatorPrices[key] ? Object.keys(aggregatorPrices[key]).length : 0;
         const quoteCount = quotePrices[key] ? Object.keys(quotePrices[key]).length : 0;
         const emailCount = emailPrices[key] ? Object.keys(emailPrices[key]).length : 0;
+        const byDirectCount = (key === "bigyellow" && bigYellowPrices) ? Object.keys(bigYellowPrices).length : 0;
 
         if (aggCount > 0) sources.push(`aggregator:${aggCount}`);
+        if (byDirectCount > 0) sources.push(`direct-quote:${byDirectCount}`);
         if (quoteCount > 0) sources.push(`quote-form:${quoteCount}`);
         if (emailCount > 0) sources.push(`email:${emailCount}`);
 
