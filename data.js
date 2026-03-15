@@ -48,17 +48,11 @@ const PROVIDERS = {
 };
 
 // Current prices per week in GBP, keyed by provider then size (sqft)
-// Last updated: 2026-03-14
-// Sources: All prices confirmed via direct quote flows
-//          Metro = internal price sheet (Feb 2026)
-//          Access = direct quote flow (all 5 sizes confirmed)
-//          Urban Locker = direct quote flow (all sizes from single quote)
-//          Safestore = direct quote flow (online price, reCAPTCHA v3 bypassed)
-//          Big Yellow = direct quote flow (ongoing rate with current discount)
+// Last updated: 2026-03-15
 const CURRENT_PRICES = {
     "metro": {
         "25": 46.75,
-        "50": 78.50,
+        "50": 78.5,
         "75": 101.25,
         "100": 123.75,
         "150": 188.75
@@ -73,7 +67,7 @@ const CURRENT_PRICES = {
     "urban": {
         "25": 45.19,
         "50": 61.73,
-        "75": 76.60,
+        "75": 76.6,
         "100": 97.72,
         "150": 210.67
     },
@@ -85,11 +79,11 @@ const CURRENT_PRICES = {
         "150": 258.99
     },
     "bigyellow": {
-        "25": 37.80,
-        "50": 59.40,
-        "75": 80.70,
-        "100": 101.70,
-        "150": 190.50
+        "25": 37.8,
+        "50": 59.4,
+        "75": 80.7,
+        "100": 101.7,
+        "150": 190.5
     }
 };
 
@@ -101,31 +95,31 @@ const CURRENT_DEALS = {
         "discountPct": 50,
         "maxWeeks": 8,
         "firstSeen": "2026-03-14",
-        "lastSeen": "2026-03-14"
+        "lastSeen": "2026-03-15"
     },
     "access": {
         "active": true,
-        "text": "50% off first 13 weeks (25-75sqft) / 50% off first 4 weeks (100-150sqft)",
+        "text": "50% off up to 13 weeks storage",
         "discountPct": 50,
         "maxWeeks": 13,
         "firstSeen": "2026-01-15",
-        "lastSeen": "2026-03-14"
+        "lastSeen": "2026-03-15"
     },
     "urban": {
         "active": true,
         "text": "50% off your first two months",
         "discountPct": 50,
-        "maxWeeks": 8,
+        "maxWeeks": 0,
         "firstSeen": "2026-03-14",
-        "lastSeen": "2026-03-14"
+        "lastSeen": "2026-03-15"
     },
     "safestore": {
         "active": true,
-        "text": "50% off first 8 weeks or £1 for first month (varies by size)",
-        "discountPct": 50,
-        "maxWeeks": 8,
-        "firstSeen": "2026-03-01",
-        "lastSeen": "2026-03-14"
+        "text": "Lowest Price Guarantee*",
+        "discountPct": 0,
+        "maxWeeks": 0,
+        "firstSeen": "2026-03-15",
+        "lastSeen": "2026-03-15"
     },
     "bigyellow": {
         "active": true,
@@ -544,7 +538,7 @@ const PRICE_HISTORY = [
         "prices": {
             "metro": {
                 "25": 46.75,
-                "50": 78.50,
+                "50": 78.5,
                 "75": 101.25,
                 "100": 123.75,
                 "150": 188.75
@@ -559,7 +553,7 @@ const PRICE_HISTORY = [
             "urban": {
                 "25": 45.19,
                 "50": 61.73,
-                "75": 76.60,
+                "75": 76.6,
                 "100": 97.72,
                 "150": 210.67
             },
@@ -571,11 +565,51 @@ const PRICE_HISTORY = [
                 "150": 258.99
             },
             "bigyellow": {
-                "25": 37.80,
-                "50": 59.40,
-                "75": 80.70,
-                "100": 101.70,
-                "150": 190.50
+                "25": 37.8,
+                "50": 59.4,
+                "75": 80.7,
+                "100": 101.7,
+                "150": 190.5
+            }
+        }
+    },
+    {
+        "date": "2026-03-15",
+        "prices": {
+            "metro": {
+                "25": 46.75,
+                "50": 78.5,
+                "75": 101.25,
+                "100": 123.75,
+                "150": 188.75
+            },
+            "access": {
+                "25": 45.46,
+                "50": 66.23,
+                "75": 112.38,
+                "100": 132.92,
+                "150": 223.85
+            },
+            "urban": {
+                "25": 45.19,
+                "50": 61.73,
+                "75": 76.6,
+                "100": 97.72,
+                "150": 210.67
+            },
+            "safestore": {
+                "25": 51.49,
+                "50": 91.99,
+                "75": 125.49,
+                "100": 120.49,
+                "150": 258.99
+            },
+            "bigyellow": {
+                "25": 37.8,
+                "50": 59.4,
+                "75": 80.7,
+                "100": 101.7,
+                "150": 190.5
             }
         }
     }
@@ -703,7 +737,7 @@ const DEALS_HISTORY = [
         "provider": "access",
         "text": "50% off up to 13 weeks storage",
         "firstSeen": "2026-01-15",
-        "lastSeen": "2026-03-14",
+        "lastSeen": "2026-03-15",
         "active": true
     },
     {
@@ -766,14 +800,21 @@ const DEALS_HISTORY = [
         "provider": "urban",
         "text": "50% off your first two months",
         "firstSeen": "2026-03-14",
-        "lastSeen": "2026-03-14",
+        "lastSeen": "2026-03-15",
         "active": true
     },
     {
         "provider": "metro",
         "text": "50% off your first 8 weeks",
         "firstSeen": "2026-03-14",
-        "lastSeen": "2026-03-14",
+        "lastSeen": "2026-03-15",
+        "active": true
+    },
+    {
+        "provider": "safestore",
+        "text": "Lowest Price Guarantee*",
+        "firstSeen": "2026-03-15",
+        "lastSeen": "2026-03-15",
         "active": true
     }
 ];
@@ -784,38 +825,38 @@ const SCRAPE_STATUS = {
         "status": "ok",
         "lastSuccess": "2026-03-14",
         "pricesFound": 5,
-        "message": "Internal price sheet (Feb 2026)"
+        "message": "Internal price sheet"
     },
     "access": {
-        "status": "ok",
+        "status": "partial",
         "lastSuccess": "2026-03-14",
         "pricesFound": 5,
-        "message": "Direct quote flow — all 5 sizes confirmed (Islington)"
+        "message": "Using cached prices - no new data today"
     },
     "urban": {
-        "status": "ok",
+        "status": "partial",
         "lastSuccess": "2026-03-14",
         "pricesFound": 5,
-        "message": "Direct quote flow — all sizes from single quote (Islington)"
+        "message": "Using cached prices - no new data today"
     },
     "safestore": {
-        "status": "ok",
+        "status": "partial",
         "lastSuccess": "2026-03-14",
         "pricesFound": 5,
-        "message": "Direct quote flow — online prices confirmed (Kings Cross, reCAPTCHA v3)"
+        "message": "Using cached prices - no new data today"
     },
     "bigyellow": {
-        "status": "ok",
+        "status": "partial",
         "lastSuccess": "2026-03-14",
         "pricesFound": 5,
-        "message": "Direct quote flow — all 5 sizes confirmed (Kings Cross)"
+        "message": "Using cached prices - no new data today"
     }
 };
 
 // Metadata
 const DATA_META = {
-    lastScraped: "2026-03-14T10:33:07.809Z",
-    scraperVersion: "3.1.0",
+    lastScraped: "2026-03-15T08:26:53.920Z",
+    scraperVersion: "4.0.0",
     location: "Islington, N1",
-    note: "Prices sourced from StorageLocator.co.uk aggregator + internal price sheet. 75/150 sqft interpolated."
+    note: "Auto-generated by scraper. Aggregator daily, quotes weekly (Mondays)."
 };
