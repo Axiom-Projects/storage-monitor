@@ -48,7 +48,7 @@ const PROVIDERS = {
 };
 
 // Current prices per week in GBP, keyed by provider then size (sqft)
-// Last updated: 2026-05-03
+// Last updated: 2026-05-04
 const CURRENT_PRICES = {
     "metro": {
         "25": 46.75,
@@ -58,9 +58,9 @@ const CURRENT_PRICES = {
         "150": 188.75
     },
     "access": {
-        "25": 114,
-        "50": 75.92,
-        "75": 111.69,
+        "25": 52.62,
+        "50": 68.08,
+        "75": 90,
         "100": 138.92,
         "150": 223.62
     },
@@ -98,7 +98,7 @@ const CURRENT_DEALS = {
         "discountPct": 50,
         "maxWeeks": 8,
         "firstSeen": "2026-03-14",
-        "lastSeen": "2026-05-03"
+        "lastSeen": "2026-05-04"
     },
     "access": {
         "active": true,
@@ -106,7 +106,7 @@ const CURRENT_DEALS = {
         "discountPct": 50,
         "maxWeeks": 13,
         "firstSeen": "2026-01-15",
-        "lastSeen": "2026-05-03"
+        "lastSeen": "2026-05-04"
     },
     "urban": {
         "active": true,
@@ -114,7 +114,7 @@ const CURRENT_DEALS = {
         "discountPct": 50,
         "maxWeeks": 0,
         "firstSeen": "2026-03-14",
-        "lastSeen": "2026-05-03"
+        "lastSeen": "2026-05-04"
     },
     "safestore": {
         "active": true,
@@ -122,7 +122,7 @@ const CURRENT_DEALS = {
         "discountPct": 0,
         "maxWeeks": 0,
         "firstSeen": "2026-03-15",
-        "lastSeen": "2026-05-03"
+        "lastSeen": "2026-05-04"
     },
     "bigyellow": {
         "active": true,
@@ -2722,6 +2722,49 @@ const PRICE_HISTORY = [
                 "150": 190.5
             }
         }
+    },
+    {
+        "date": "2026-05-04",
+        "prices": {
+            "metro": {
+                "25": 46.75,
+                "50": 78.5,
+                "75": 101.25,
+                "100": 123.75,
+                "150": 188.75
+            },
+            "access": {
+                "25": 52.62,
+                "50": 68.08,
+                "75": 90,
+                "100": 138.92,
+                "150": 223.62
+            },
+            "urban": {
+                "10": 20.01,
+                "25": 45.19,
+                "35": 46.25,
+                "50": 68.78,
+                "75": 76.6,
+                "100": 105.24,
+                "125": 170.45,
+                "150": 210.67
+            },
+            "safestore": {
+                "25": 51.49,
+                "50": 91.99,
+                "75": 125.49,
+                "100": 120.49,
+                "150": 258.99
+            },
+            "bigyellow": {
+                "25": 37.8,
+                "50": 59.4,
+                "75": 80.7,
+                "100": 101.7,
+                "150": 190.5
+            }
+        }
     }
 ];
 
@@ -3041,6 +3084,27 @@ const PRICE_CHANGES = [
         "size": 50,
         "oldPrice": 61.73,
         "newPrice": 68.78
+    },
+    {
+        "date": "2026-05-04",
+        "provider": "access",
+        "size": 25,
+        "oldPrice": 114,
+        "newPrice": 52.62
+    },
+    {
+        "date": "2026-05-04",
+        "provider": "access",
+        "size": 50,
+        "oldPrice": 75.92,
+        "newPrice": 68.08
+    },
+    {
+        "date": "2026-05-04",
+        "provider": "access",
+        "size": 75,
+        "oldPrice": 111.69,
+        "newPrice": 90
     }
 ];
 
@@ -3057,7 +3121,7 @@ const DEALS_HISTORY = [
         "provider": "access",
         "text": "50% off up to 13 weeks storage",
         "firstSeen": "2026-01-15",
-        "lastSeen": "2026-05-03",
+        "lastSeen": "2026-05-04",
         "active": true
     },
     {
@@ -3120,21 +3184,21 @@ const DEALS_HISTORY = [
         "provider": "urban",
         "text": "50% off your first two months",
         "firstSeen": "2026-03-14",
-        "lastSeen": "2026-05-03",
+        "lastSeen": "2026-05-04",
         "active": true
     },
     {
         "provider": "metro",
         "text": "50% off your first 8 weeks",
         "firstSeen": "2026-03-14",
-        "lastSeen": "2026-05-03",
+        "lastSeen": "2026-05-04",
         "active": true
     },
     {
         "provider": "safestore",
         "text": "Lowest Price Guarantee*",
         "firstSeen": "2026-03-15",
-        "lastSeen": "2026-05-03",
+        "lastSeen": "2026-05-04",
         "active": true
     },
     {
@@ -3162,16 +3226,16 @@ const SCRAPE_STATUS = {
         "message": "Internal price sheet"
     },
     "access": {
-        "status": "partial",
-        "lastSuccess": "2026-04-27",
+        "status": "ok",
+        "lastSuccess": "2026-05-04",
         "pricesFound": 5,
-        "message": "Using cached prices - no new data today"
+        "message": "Sources: quote-form:5 (5/5 sizes)"
     },
     "urban": {
-        "status": "partial",
-        "lastSuccess": "2026-04-27",
+        "status": "ok",
+        "lastSuccess": "2026-05-04",
         "pricesFound": 8,
-        "message": "Using cached prices - no new data today"
+        "message": "Sources: quote-form:6 (8/5 sizes)"
     },
     "safestore": {
         "status": "partial",
@@ -3189,7 +3253,7 @@ const SCRAPE_STATUS = {
 
 // Metadata
 const DATA_META = {
-    lastScraped: "2026-05-03T09:11:53.860Z",
+    lastScraped: "2026-05-04T10:05:15.935Z",
     scraperVersion: "4.0.0",
     location: "Islington, N1",
     note: "Auto-generated by scraper. Aggregator daily, quotes weekly (Mondays)."
