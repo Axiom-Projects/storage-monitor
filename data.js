@@ -59,7 +59,7 @@ const CURRENT_PRICES = {
     },
     "access": {
         "25": 53.31,
-        "50": 34.5,
+        "50": 149.5,
         "75": 98.08,
         "100": 132.69,
         "150": 223.62
@@ -3921,8 +3921,8 @@ const SCRAPE_STATUS = {
     "access": {
         "status": "ok",
         "lastSuccess": "2026-05-18",
-        "pricesFound": 5,
-        "message": "Sources: quote-form:3, email:1 (5/5 sizes)"
+        "pricesFound": 1,
+        "message": "Updated via email quote (2026-05-18)"
     },
     "urban": {
         "status": "ok",
