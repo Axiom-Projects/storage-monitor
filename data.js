@@ -48,7 +48,7 @@ const PROVIDERS = {
 };
 
 // Current prices per week in GBP, keyed by provider then size (sqft)
-// Last updated: 2026-05-24
+// Last updated: 2026-05-25
 const CURRENT_PRICES = {
     "metro": {
         "25": 46.75,
@@ -58,19 +58,19 @@ const CURRENT_PRICES = {
         "150": 188.75
     },
     "access": {
-        "25": 53.31,
-        "50": 149.5,
-        "75": 98.08,
-        "100": 132.69,
-        "150": 223.62
+        "25": 29,
+        "50": 72.46,
+        "75": 108.69,
+        "100": 138.92,
+        "150": 223.38
     },
     "urban": {
         "10": 20.01,
         "25": 57.93,
         "35": 71.16,
-        "50": 68.78,
-        "75": 76.6,
-        "100": 105.24,
+        "50": 79.36,
+        "75": 100.17,
+        "100": 135.31,
         "125": 170.45,
         "150": 210.67
     },
@@ -98,7 +98,7 @@ const CURRENT_DEALS = {
         "discountPct": 50,
         "maxWeeks": 8,
         "firstSeen": "2026-03-14",
-        "lastSeen": "2026-05-24"
+        "lastSeen": "2026-05-25"
     },
     "access": {
         "active": true,
@@ -106,7 +106,7 @@ const CURRENT_DEALS = {
         "discountPct": 50,
         "maxWeeks": 13,
         "firstSeen": "2026-01-15",
-        "lastSeen": "2026-05-24"
+        "lastSeen": "2026-05-25"
     },
     "urban": {
         "active": true,
@@ -114,7 +114,7 @@ const CURRENT_DEALS = {
         "discountPct": 50,
         "maxWeeks": 0,
         "firstSeen": "2026-03-14",
-        "lastSeen": "2026-05-24"
+        "lastSeen": "2026-05-25"
     },
     "safestore": {
         "active": true,
@@ -122,7 +122,7 @@ const CURRENT_DEALS = {
         "discountPct": 50,
         "maxWeeks": 8,
         "firstSeen": "2026-05-16",
-        "lastSeen": "2026-05-24"
+        "lastSeen": "2026-05-25"
     },
     "bigyellow": {
         "active": true,
@@ -3625,6 +3625,49 @@ const PRICE_HISTORY = [
                 "150": 190.5
             }
         }
+    },
+    {
+        "date": "2026-05-25",
+        "prices": {
+            "metro": {
+                "25": 46.75,
+                "50": 78.5,
+                "75": 101.25,
+                "100": 123.75,
+                "150": 188.75
+            },
+            "access": {
+                "25": 29,
+                "50": 72.46,
+                "75": 108.69,
+                "100": 138.92,
+                "150": 223.38
+            },
+            "urban": {
+                "10": 20.01,
+                "25": 57.93,
+                "35": 71.16,
+                "50": 79.36,
+                "75": 100.17,
+                "100": 135.31,
+                "125": 170.45,
+                "150": 210.67
+            },
+            "safestore": {
+                "25": 51.49,
+                "50": 91.99,
+                "75": 125.49,
+                "100": 120.49,
+                "150": 258.99
+            },
+            "bigyellow": {
+                "25": 37.8,
+                "50": 59.4,
+                "75": 80.7,
+                "100": 101.7,
+                "150": 190.5
+            }
+        }
     }
 ];
 
@@ -4035,6 +4078,62 @@ const PRICE_CHANGES = [
         "size": 150,
         "oldPrice": 223.38,
         "newPrice": 223.62
+    },
+    {
+        "date": "2026-05-25",
+        "provider": "access",
+        "size": 25,
+        "oldPrice": 53.31,
+        "newPrice": 29
+    },
+    {
+        "date": "2026-05-25",
+        "provider": "access",
+        "size": 50,
+        "oldPrice": 149.5,
+        "newPrice": 72.46
+    },
+    {
+        "date": "2026-05-25",
+        "provider": "access",
+        "size": 75,
+        "oldPrice": 98.08,
+        "newPrice": 108.69
+    },
+    {
+        "date": "2026-05-25",
+        "provider": "access",
+        "size": 100,
+        "oldPrice": 132.69,
+        "newPrice": 138.92
+    },
+    {
+        "date": "2026-05-25",
+        "provider": "access",
+        "size": 150,
+        "oldPrice": 223.62,
+        "newPrice": 223.38
+    },
+    {
+        "date": "2026-05-25",
+        "provider": "urban",
+        "size": 50,
+        "oldPrice": 68.78,
+        "newPrice": 79.36
+    },
+    {
+        "date": "2026-05-25",
+        "provider": "urban",
+        "size": 75,
+        "oldPrice": 76.6,
+        "newPrice": 100.17
+    },
+    {
+        "date": "2026-05-25",
+        "provider": "urban",
+        "size": 100,
+        "oldPrice": 105.24,
+        "newPrice": 135.31
     }
 ];
 
@@ -4051,7 +4150,7 @@ const DEALS_HISTORY = [
         "provider": "access",
         "text": "50% off up to 13 weeks storage",
         "firstSeen": "2026-01-15",
-        "lastSeen": "2026-05-24",
+        "lastSeen": "2026-05-25",
         "active": true
     },
     {
@@ -4114,14 +4213,14 @@ const DEALS_HISTORY = [
         "provider": "urban",
         "text": "50% off your first two months",
         "firstSeen": "2026-03-14",
-        "lastSeen": "2026-05-24",
+        "lastSeen": "2026-05-25",
         "active": true
     },
     {
         "provider": "metro",
         "text": "50% off your first 8 weeks",
         "firstSeen": "2026-03-14",
-        "lastSeen": "2026-05-24",
+        "lastSeen": "2026-05-25",
         "active": true
     },
     {
@@ -4163,7 +4262,7 @@ const DEALS_HISTORY = [
         "provider": "safestore",
         "text": "50% Off 8 Weeks*",
         "firstSeen": "2026-05-16",
-        "lastSeen": "2026-05-24",
+        "lastSeen": "2026-05-25",
         "active": true
     }
 ];
@@ -4177,16 +4276,16 @@ const SCRAPE_STATUS = {
         "message": "Internal price sheet"
     },
     "access": {
-        "status": "partial",
-        "lastSuccess": "2026-05-18",
+        "status": "ok",
+        "lastSuccess": "2026-05-25",
         "pricesFound": 5,
-        "message": "Using cached prices - no new data today"
+        "message": "Sources: quote-form:5, email:1 (5/5 sizes)"
     },
     "urban": {
-        "status": "partial",
-        "lastSuccess": "2026-05-18",
+        "status": "ok",
+        "lastSuccess": "2026-05-25",
         "pricesFound": 8,
-        "message": "Using cached prices - no new data today"
+        "message": "Sources: quote-form:7 (8/5 sizes)"
     },
     "safestore": {
         "status": "partial",
@@ -4204,7 +4303,7 @@ const SCRAPE_STATUS = {
 
 // Metadata
 const DATA_META = {
-    lastScraped: "2026-05-24T09:45:10.686Z",
+    lastScraped: "2026-05-25T11:44:45.595Z",
     scraperVersion: "4.0.0",
     location: "Islington, N1",
     note: "Auto-generated by scraper. Aggregator daily, quotes weekly (Mondays)."
