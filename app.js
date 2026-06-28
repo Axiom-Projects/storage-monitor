@@ -88,6 +88,7 @@
         renderPriceChart();
         renderSqftChart();
         renderDealsTimeline();
+        renderInsuranceFees();
         renderChangelog();
         renderScrapeStatus();
         renderOverridesList();
@@ -97,6 +98,8 @@
     function updateSizeLabels() {
         document.getElementById("table-size-label").textContent = `(${selectedSize} sqft)`;
         document.getElementById("chart-size-label").textContent = `(${selectedSize} sqft/week)`;
+        const fl = document.getElementById("fees-size-label");
+        if (fl) fl.textContent = `(all-in at ${selectedSize} sqft)`;
     }
 
     function renderLastUpdated() {
@@ -502,6 +505,121 @@
                 </tr>
             `;
         }).join("");
+    }
+
+    // --- Insurance & Upfront Fees ---
+    function renderInsuranceFees() {
+        if (typeof INSURANCE === "undefined" || typeof ADMIN_FEES === "undefined") return;
+        const size = selectedSize;
+        const metroIns = INSURANCE.metro ? (INSURANCE.metro.entryWeekly || 0) : 0;
+        const myRent = CURRENT_PRICES.metro ? CURRENT_PRICES.metro[size] : null;
+        const myAllIn = myRent != null ? myRent + metroIns : null;
+
+        const rows = Object.keys(PROVIDERS).map(key => {
+            const provider = PROVIDERS[key];
+            const ins = INSURANCE[key] || {};
+            const fee = ADMIN_FEES[key] || {};
+            const rent = CURRENT_PRICES[key] ? CURRENT_PRICES[key][size] : null;
+            const insWeekly = (ins.entryWeekly === 0 || ins.entryWeekly) ? ins.entryWeekly : null;
+            const allIn = (rent != null && insWeekly != null) ? rent + insWeekly : null;
+
+            // Insurance cell
+            let insCell, insSub = "";
+            if (ins.model === "included") {
+                insCell = '<span class="cheaper">Free (incl.)</span>';
+                insSub = "up to £14k cover";
+            } else if (insWeekly != null) {
+                const approx = ins.model === "rate" ? "≈ " : "";
+                insCell = `${approx}${formatGBP(insWeekly)}/wk`;
+                const t = (ins.tiers && ins.tiers[0]) ? ins.tiers[0].coverGBP : null;
+                insSub = t ? `£${(t / 1000).toFixed(0)}k cover` : "";
+            } else {
+                insCell = '<span class="quote-only">Quote only</span>';
+            }
+
+            // Upfront fees cell
+            let feeCell;
+            if (fee.totalUpfront === 0) {
+                feeCell = "None";
+            } else if (fee.totalUpfront != null) {
+                const paid = (fee.items || [])
+                    .filter(i => i.oneOff && i.amountGBP > 0)
+                    .map(i => `${formatGBP(i.amountGBP)} ${i.label.toLowerCase()}`);
+                feeCell = paid.length ? paid.join(", ") : formatGBP(fee.totalUpfront);
+            } else {
+                feeCell = '<span class="quote-only">Quote only</span>';
+            }
+
+            // vs You (all-in basis)
+            let vsYou = "", vsClass = "";
+            if (!provider.isYou) {
+                if (allIn == null || myAllIn == null) {
+                    vsYou = "n/a"; vsClass = "price-muted";
+                } else {
+                    const diff = allIn - myAllIn;
+                    const pct = ((diff / myAllIn) * 100).toFixed(0);
+                    if (diff > 0) { vsYou = `+${formatGBP(diff)} (+${pct}%)`; vsClass = "pricier"; }
+                    else if (diff < 0) { vsYou = `${formatGBP(diff)} (${pct}%)`; vsClass = "cheaper"; }
+                    else { vsYou = "Same"; vsClass = "price-same"; }
+                }
+            }
+
+            return {
+                key, name: provider.name + (provider.isYou ? " (You)" : ""), isYou: provider.isYou,
+                insCell, insSub, brand: ins.brand || "—", mandatory: ins.mandatory,
+                feeCell, feeNote: fee.note || "", insNote: ins.note || "",
+                rent, allIn, vsYou, vsClass, conf: ins.confidence || "low",
+                sortKey: allIn != null ? allIn : Infinity
+            };
+        }).sort((a, b) => a.sortKey - b.sortKey);
+
+        const confDot = c => `<span class="conf-dot conf-${c}" title="${c} confidence"></span>`;
+        document.getElementById("fees-table-body").innerHTML = rows.map(r => `
+            <tr class="${r.isYou ? "is-you" : ""}">
+                <td>${r.name} ${confDot(r.conf)}</td>
+                <td title="${escapeAttr(r.insNote)}">${r.insCell}${r.insSub ? `<div class="cell-sub">${r.insSub}</div>` : ""}</td>
+                <td>${r.brand}${r.mandatory ? ' <span class="tag-mandatory">mandatory</span>' : ""}</td>
+                <td title="${escapeAttr(r.feeNote)}">${r.feeCell}</td>
+                <td>${r.rent != null ? formatGBP(r.rent) : "—"}</td>
+                <td>${r.allIn != null ? `<strong>${formatGBP(r.allIn)}</strong>` : '<span class="price-muted">—</span>'}</td>
+                <td class="${r.vsClass}">${r.isYou ? "—" : r.vsYou}</td>
+            </tr>
+        `).join("");
+
+        // Insurance tier ladder (where published)
+        const tierHtml = Object.keys(PROVIDERS).map(key => {
+            const ins = INSURANCE[key];
+            if (!ins) return "";
+            let body;
+            if (ins.model === "included") {
+                body = '<span class="cheaper">Included free</span> up to £14,000 cover (scales with unit size); excess £4 per £1,000 / 4wks';
+            } else if (ins.tiers && ins.tiers.length) {
+                body = ins.tiers.map(t => {
+                    const per = t.period === "month" ? "/mo" : "/wk";
+                    return `£${(t.coverGBP / 1000).toFixed(0)}k cover &rarr; <strong>${formatGBP(t.costGBP)}</strong>${per}${t.derived ? " <span class=\"price-muted\">(derived)</span>" : ""}`;
+                }).join(" &nbsp;&middot;&nbsp; ") + (ins.published === "partial" ? ' &nbsp;&middot;&nbsp; <span class="price-muted">higher tiers quote-only</span>' : "");
+            } else {
+                body = '<span class="quote-only">Not published &mdash; quote only</span>';
+            }
+            return `<div class="tier-row">
+                <div><span class="tier-prov" style="color:${PROVIDERS[key].color}">${PROVIDERS[key].shortName}</span>
+                <span class="tier-brand">${ins.brand || ""}</span></div>
+                <div class="tier-body">${body}</div></div>`;
+        }).join("");
+        document.getElementById("insurance-tiers").innerHTML =
+            `<h3 class="tiers-h">Insurance tiers by cover value <span class="unit-label">(where published)</span></h3>${tierHtml}`;
+
+        // Provenance
+        const researched = INSURANCE.metro && INSURANCE.metro.lastResearched;
+        document.getElementById("fees-provenance").innerHTML =
+            `<strong style="color:var(--text)">About this data:</strong> Insurance &amp; fee figures researched manually from each provider's own pages` +
+            `${researched ? ` (${formatDate(researched)})` : ""}, not auto-scraped &mdash; preserved across scraper runs. ` +
+            `Confidence: <span class="conf-dot conf-high"></span> confirmed &nbsp; <span class="conf-dot conf-medium"></span> partial / derived &nbsp; <span class="conf-dot conf-low"></span> unpublished (quote-only). ` +
+            `Contents protection is mandatory everywhere, but most operators only disclose exact tiers on a personalised quote. Hover a cell for the source note.`;
+    }
+
+    function escapeAttr(s) {
+        return String(s || "").replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;");
     }
 
     // --- Manual Price Overrides ---

@@ -333,3 +333,30 @@ footer {
     .alerts-banner { margin: 16px; }
     .size-buttons { flex-wrap: wrap; }
 }
+
+/* --- Insurance & Upfront Fees --- */
+.quote-only { color: var(--text-muted); font-style: italic; }
+.price-muted { color: var(--text-muted); }
+.cell-sub { color: var(--text-muted); font-size: 11px; margin-top: 2px; }
+.tag-mandatory {
+    display: inline-block; font-size: 10px; text-transform: uppercase; letter-spacing: 0.04em;
+    color: var(--amber); background: var(--amber-bg); padding: 1px 6px; border-radius: 4px; vertical-align: middle;
+}
+.conf-dot {
+    display: inline-block; width: 8px; height: 8px; border-radius: 50%;
+    vertical-align: middle; margin-left: 2px;
+}
+.conf-high { background: var(--green); }
+.conf-medium { background: var(--amber); }
+.conf-low { background: var(--red); }
+
+.insurance-tiers { margin-top: 20px; }
+.tiers-h { font-size: 14px; margin: 0 0 10px; color: var(--text); }
+.tier-row {
+    display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px 14px;
+    padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 13px;
+}
+.tier-row:last-child { border-bottom: none; }
+.tier-prov { font-weight: 700; }
+.tier-brand { color: var(--text-muted); font-size: 12px; }
+.tier-body { color: var(--text); flex: 1 1 280px; }

@@ -48,33 +48,30 @@ const PROVIDERS = {
 };
 
 // Current prices per week in GBP, keyed by provider then size (sqft)
-// Last updated: 2026-03-14
-// Sources: All prices confirmed via direct quote flows
-//          Metro = internal price sheet (Feb 2026)
-//          Access = direct quote flow (all 5 sizes confirmed)
-//          Urban Locker = direct quote flow (all sizes from single quote)
-//          Safestore = direct quote flow (online price, reCAPTCHA v3 bypassed)
-//          Big Yellow = direct quote flow (ongoing rate with current discount)
+// Last updated: 2026-06-22
 const CURRENT_PRICES = {
     "metro": {
         "25": 46.75,
-        "50": 78.50,
+        "50": 78.5,
         "75": 101.25,
         "100": 123.75,
         "150": 188.75
     },
     "access": {
-        "25": 45.46,
+        "25": 45.69,
         "50": 66.23,
-        "75": 112.38,
-        "100": 132.92,
+        "75": 108.92,
+        "100": 137.77,
         "150": 223.85
     },
     "urban": {
-        "25": 45.19,
-        "50": 61.73,
-        "75": 76.60,
-        "100": 97.72,
+        "10": 28.59,
+        "25": 57.93,
+        "35": 71.16,
+        "50": 74.95,
+        "75": 100.17,
+        "100": 135.31,
+        "125": 170.45,
         "150": 210.67
     },
     "safestore": {
@@ -85,11 +82,11 @@ const CURRENT_PRICES = {
         "150": 258.99
     },
     "bigyellow": {
-        "25": 37.80,
-        "50": 59.40,
-        "75": 80.70,
-        "100": 101.70,
-        "150": 190.50
+        "25": 55.2,
+        "50": 65.1,
+        "75": 94.5,
+        "100": 104.4,
+        "150": 162.9
     }
 };
 
@@ -101,39 +98,183 @@ const CURRENT_DEALS = {
         "discountPct": 50,
         "maxWeeks": 8,
         "firstSeen": "2026-03-14",
-        "lastSeen": "2026-03-14"
+        "lastSeen": "2026-06-22"
     },
     "access": {
         "active": true,
-        "text": "50% off first 13 weeks (25-75sqft) / 50% off first 4 weeks (100-150sqft)",
+        "text": "50% off up to 13 weeks storage",
         "discountPct": 50,
         "maxWeeks": 13,
         "firstSeen": "2026-01-15",
-        "lastSeen": "2026-03-14"
+        "lastSeen": "2026-06-22"
     },
     "urban": {
         "active": true,
         "text": "50% off your first two months",
         "discountPct": 50,
-        "maxWeeks": 8,
+        "maxWeeks": 0,
         "firstSeen": "2026-03-14",
-        "lastSeen": "2026-03-14"
+        "lastSeen": "2026-06-22"
     },
     "safestore": {
         "active": true,
-        "text": "50% off first 8 weeks or £1 for first month (varies by size)",
+        "text": "50% off storage for 8 weeks",
         "discountPct": 50,
         "maxWeeks": 8,
-        "firstSeen": "2026-03-01",
-        "lastSeen": "2026-03-14"
+        "firstSeen": "2026-06-22",
+        "lastSeen": "2026-06-22"
     },
     "bigyellow": {
         "active": true,
-        "text": "50% off for first 8 weeks",
+        "text": "50% off for up to 8 weeks",
         "discountPct": 50,
         "maxWeeks": 8,
-        "firstSeen": "2026-03-14",
-        "lastSeen": "2026-03-14"
+        "firstSeen": "2026-06-22",
+        "lastSeen": "2026-06-22"
+    }
+};
+
+// ============================================================
+// INSURANCE / CONTENTS PROTECTION  (researched 2026-06-28, manually maintained)
+// UK self-storage insurance is normally MANDATORY and tiered by the declared value
+// of goods. Most operators DON'T publish a full ladder (quote-only) — we record only
+// figures confirmed from each provider's own pages. `entryWeekly` is a normalised
+// £/week entry cost for like-for-like comparison (converted where a provider quotes
+// monthly; null where not published). NOT auto-scraped — the daily scraper preserves
+// this block. model: included | rate | tiered | quote-only.
+const INSURANCE = {
+    metro: {
+        brand: "StoreReady Contents Protection",
+        mandatory: true,
+        model: "included",
+        published: "full",
+        entryWeekly: 0,
+        tiers: [],
+        note: "Cover INCLUDED FREE in the rent, scaling with unit size (~£2,000 for a 20 sqft room) up to a max £14,000. Only excess above £14,000 is charged: £4 per £1,000 per 4 weeks.",
+        confidence: "high",
+        source: "https://www.metro-storage.co.uk/knowledge-centre/i-insure-goods/",
+        lastResearched: "2026-06-28"
+    },
+    access: {
+        brand: "Contents Protection",
+        mandatory: true,
+        model: "rate",
+        published: "partial",
+        entryWeekly: 1.72,
+        ratePer1000: 1.86,
+        ratePeriod: "month",
+        minCoverGBP: 4000,
+        tiers: [
+            { coverGBP: 4000, costGBP: 7.44, period: "month", derived: true }
+        ],
+        note: "Priced 'from £1.86 per £1,000 of cover / calendar month', minimum £4,000 cover. No public ladder — entry tier derived from the published rate. Weekly figure approximate (×12/52).",
+        confidence: "medium",
+        source: "https://www.accessstorage.com/self-storage-insurance",
+        lastResearched: "2026-06-28"
+    },
+    urban: {
+        brand: "StoreProtect",
+        mandatory: true,
+        model: "quote-only",
+        published: "none",
+        entryWeekly: null,
+        tiers: [],
+        note: "Goods protection mandatory (own policy or their StoreProtect). No cover tiers or prices published anywhere — disclosed only on a personalised quote.",
+        confidence: "low",
+        source: "https://www.urbanlocker.co.uk/faqs/",
+        lastResearched: "2026-06-28"
+    },
+    safestore: {
+        brand: "StoreProtect",
+        mandatory: true,
+        model: "quote-only",
+        published: "none",
+        entryWeekly: null,
+        tiers: [],
+        note: "Mandatory (own insurance or StoreProtect enhanced-liability). Value-tiered but no ladder published — quoted in store. Separate £50 claims-admin fee is deducted from any claim settlement.",
+        confidence: "low",
+        source: "https://www.safestore.co.uk/storeprotect/",
+        lastResearched: "2026-06-28"
+    },
+    bigyellow: {
+        brand: "Enhanced Liability Service",
+        mandatory: true,
+        model: "tiered",
+        published: "partial",
+        entryWeekly: 6.25,
+        tiers: [
+            { coverGBP: 4000, costGBP: 6.25, period: "week" },
+            { coverGBP: 6000, costGBP: 8.00, period: "week" }
+        ],
+        note: "Mandatory (own policy or their Enhanced Liability Service). From £6.25/wk for £4,000 cover; £8.00/wk for £6,000 (stated average). Higher tiers quote-only.",
+        confidence: "medium",
+        source: "https://www.bigyellow.co.uk/faqs/insurance-contents-protection/",
+        lastResearched: "2026-06-28"
+    }
+};
+
+// ============================================================
+// ONE-OFF / UPFRONT FEES  (researched 2026-06-28, manually maintained)
+// Non-recurring charges to start a unit. amountGBP null = exists but not published.
+// `totalUpfront` = sum of KNOWN mandatory one-off fees (refundable deposits excluded);
+// null when a mandatory fee exists but its amount is unknown. NOT auto-scraped.
+const ADMIN_FEES = {
+    metro: {
+        items: [
+            { type: "admin", label: "Admin / sign-up fee", amountGBP: 0, oneOff: true },
+            { type: "padlock", label: "Padlock", amountGBP: 0, oneOff: true, note: "Free use included" }
+        ],
+        totalUpfront: 0,
+        note: "All-inclusive: no admin/sign-up fee, free padlock.",
+        confidence: "high",
+        source: "https://www.metro-storage.co.uk/prices/",
+        lastResearched: "2026-06-28"
+    },
+    access: {
+        items: [
+            { type: "admin", label: "Admin fee", amountGBP: 0, oneOff: true },
+            { type: "deposit", label: "Deposit", amountGBP: 0, oneOff: true },
+            { type: "padlock", label: "Padlock (in-store)", amountGBP: 14, oneOff: true }
+        ],
+        totalUpfront: 14,
+        note: "No admin fee or deposit; padlock £14 in store if you need one.",
+        confidence: "medium",
+        source: "https://www.accessstorage.com/faqs",
+        lastResearched: "2026-06-28"
+    },
+    urban: {
+        items: [
+            { type: "padlock", label: "Padlock", amountGBP: 0, oneOff: true, note: "App access at Islington — no padlock needed" }
+        ],
+        totalUpfront: null,
+        note: "No fees published. Smartphone-app access (no padlock required). Admin/deposit not disclosed.",
+        confidence: "low",
+        source: "https://www.urbanlocker.co.uk/faqs/",
+        lastResearched: "2026-06-28"
+    },
+    safestore: {
+        items: [
+            { type: "deposit", label: "Security deposit", amountGBP: null, oneOff: true, note: "Required on move-in; amount not published" },
+            { type: "padlock", label: "Padlock (in-store)", amountGBP: null, oneOff: true },
+            { type: "admin", label: "Claims admin fee", amountGBP: 50, oneOff: false, note: "Deducted from any claim — not an upfront fee" }
+        ],
+        totalUpfront: null,
+        note: "Deposit + padlock required on move-in but amounts not published (quote/in-store). £50 claims-admin applies only on a claim.",
+        confidence: "low",
+        source: "https://www.safestore.co.uk/faqs/",
+        lastResearched: "2026-06-28"
+    },
+    bigyellow: {
+        items: [
+            { type: "admin", label: "Set-up fee", amountGBP: 0, oneOff: true },
+            { type: "deposit", label: "Security deposit (refundable)", amountGBP: null, oneOff: true, note: "= one week's rent; refunded on vacate" },
+            { type: "padlock", label: "Padlock (in-store)", amountGBP: null, oneOff: true }
+        ],
+        totalUpfront: 0,
+        note: "No set-up fee. Refundable deposit = one week's rent. Padlock sold in store (price not published).",
+        confidence: "medium",
+        source: "https://www.bigyellow.co.uk/faqs/payment/",
+        lastResearched: "2026-06-28"
     }
 };
 
@@ -544,7 +685,7 @@ const PRICE_HISTORY = [
         "prices": {
             "metro": {
                 "25": 46.75,
-                "50": 78.50,
+                "50": 78.5,
                 "75": 101.25,
                 "100": 123.75,
                 "150": 188.75
@@ -559,7 +700,7 @@ const PRICE_HISTORY = [
             "urban": {
                 "25": 45.19,
                 "50": 61.73,
-                "75": 76.60,
+                "75": 76.6,
                 "100": 97.72,
                 "150": 210.67
             },
@@ -571,11 +712,54 @@ const PRICE_HISTORY = [
                 "150": 258.99
             },
             "bigyellow": {
-                "25": 37.80,
-                "50": 59.40,
-                "75": 80.70,
-                "100": 101.70,
-                "150": 190.50
+                "25": 37.8,
+                "50": 59.4,
+                "75": 80.7,
+                "100": 101.7,
+                "150": 190.5
+            }
+        }
+    },
+    {
+        "date": "2026-06-22",
+        "prices": {
+            "metro": {
+                "25": 46.75,
+                "50": 78.5,
+                "75": 101.25,
+                "100": 123.75,
+                "150": 188.75
+            },
+            "access": {
+                "25": 45.69,
+                "50": 66.23,
+                "75": 108.92,
+                "100": 137.77,
+                "150": 223.85
+            },
+            "urban": {
+                "10": 28.59,
+                "25": 57.93,
+                "35": 71.16,
+                "50": 74.95,
+                "75": 100.17,
+                "100": 135.31,
+                "125": 170.45,
+                "150": 210.67
+            },
+            "safestore": {
+                "25": 51.49,
+                "50": 91.99,
+                "75": 125.49,
+                "100": 120.49,
+                "150": 258.99
+            },
+            "bigyellow": {
+                "25": 55.2,
+                "50": 65.1,
+                "75": 94.5,
+                "100": 104.4,
+                "150": 162.9
             }
         }
     }
@@ -687,6 +871,90 @@ const PRICE_CHANGES = [
         "size": 50,
         "oldPrice": 57,
         "newPrice": 58
+    },
+    {
+        "date": "2026-06-22",
+        "provider": "access",
+        "size": 25,
+        "oldPrice": 45.46,
+        "newPrice": 45.69
+    },
+    {
+        "date": "2026-06-22",
+        "provider": "access",
+        "size": 75,
+        "oldPrice": 112.38,
+        "newPrice": 108.92
+    },
+    {
+        "date": "2026-06-22",
+        "provider": "access",
+        "size": 100,
+        "oldPrice": 132.92,
+        "newPrice": 137.77
+    },
+    {
+        "date": "2026-06-22",
+        "provider": "urban",
+        "size": 25,
+        "oldPrice": 45.19,
+        "newPrice": 57.93
+    },
+    {
+        "date": "2026-06-22",
+        "provider": "urban",
+        "size": 50,
+        "oldPrice": 61.73,
+        "newPrice": 74.95
+    },
+    {
+        "date": "2026-06-22",
+        "provider": "urban",
+        "size": 75,
+        "oldPrice": 76.6,
+        "newPrice": 100.17
+    },
+    {
+        "date": "2026-06-22",
+        "provider": "urban",
+        "size": 100,
+        "oldPrice": 97.72,
+        "newPrice": 135.31
+    },
+    {
+        "date": "2026-06-22",
+        "provider": "bigyellow",
+        "size": 25,
+        "oldPrice": 37.8,
+        "newPrice": 55.2
+    },
+    {
+        "date": "2026-06-22",
+        "provider": "bigyellow",
+        "size": 50,
+        "oldPrice": 59.4,
+        "newPrice": 65.1
+    },
+    {
+        "date": "2026-06-22",
+        "provider": "bigyellow",
+        "size": 75,
+        "oldPrice": 80.7,
+        "newPrice": 94.5
+    },
+    {
+        "date": "2026-06-22",
+        "provider": "bigyellow",
+        "size": 100,
+        "oldPrice": 101.7,
+        "newPrice": 104.4
+    },
+    {
+        "date": "2026-06-22",
+        "provider": "bigyellow",
+        "size": 150,
+        "oldPrice": 190.5,
+        "newPrice": 162.9
     }
 ];
 
@@ -703,7 +971,7 @@ const DEALS_HISTORY = [
         "provider": "access",
         "text": "50% off up to 13 weeks storage",
         "firstSeen": "2026-01-15",
-        "lastSeen": "2026-03-14",
+        "lastSeen": "2026-06-22",
         "active": true
     },
     {
@@ -766,14 +1034,28 @@ const DEALS_HISTORY = [
         "provider": "urban",
         "text": "50% off your first two months",
         "firstSeen": "2026-03-14",
-        "lastSeen": "2026-03-14",
+        "lastSeen": "2026-06-22",
         "active": true
     },
     {
         "provider": "metro",
         "text": "50% off your first 8 weeks",
         "firstSeen": "2026-03-14",
-        "lastSeen": "2026-03-14",
+        "lastSeen": "2026-06-22",
+        "active": true
+    },
+    {
+        "provider": "safestore",
+        "text": "50% off storage for 8 weeks",
+        "firstSeen": "2026-06-22",
+        "lastSeen": "2026-06-22",
+        "active": true
+    },
+    {
+        "provider": "bigyellow",
+        "text": "50% off for up to 8 weeks",
+        "firstSeen": "2026-06-22",
+        "lastSeen": "2026-06-22",
         "active": true
     }
 ];
@@ -784,38 +1066,38 @@ const SCRAPE_STATUS = {
         "status": "ok",
         "lastSuccess": "2026-03-14",
         "pricesFound": 5,
-        "message": "Internal price sheet (Feb 2026)"
+        "message": "Internal price sheet"
     },
     "access": {
         "status": "ok",
-        "lastSuccess": "2026-03-14",
+        "lastSuccess": "2026-06-22",
         "pricesFound": 5,
-        "message": "Direct quote flow — all 5 sizes confirmed (Islington)"
+        "message": "Sources: quote-form:3 (5/5 sizes)"
     },
     "urban": {
         "status": "ok",
-        "lastSuccess": "2026-03-14",
-        "pricesFound": 5,
-        "message": "Direct quote flow — all sizes from single quote (Islington)"
+        "lastSuccess": "2026-06-22",
+        "pricesFound": 8,
+        "message": "Sources: quote-form:8 (8/5 sizes)"
     },
     "safestore": {
-        "status": "ok",
+        "status": "partial",
         "lastSuccess": "2026-03-14",
         "pricesFound": 5,
-        "message": "Direct quote flow — online prices confirmed (Kings Cross, reCAPTCHA v3)"
+        "message": "Using cached prices - no new data today"
     },
     "bigyellow": {
-        "status": "ok",
+        "status": "partial",
         "lastSuccess": "2026-03-14",
         "pricesFound": 5,
-        "message": "Direct quote flow — all 5 sizes confirmed (Kings Cross)"
+        "message": "Using cached prices - no new data today"
     }
 };
 
 // Metadata
 const DATA_META = {
-    lastScraped: "2026-03-14T10:33:07.809Z",
-    scraperVersion: "3.1.0",
+    lastScraped: "2026-06-22T20:45:54.759Z",
+    scraperVersion: "4.0.0",
     location: "Islington, N1",
-    note: "Prices sourced from StorageLocator.co.uk aggregator + internal price sheet. 75/150 sqft interpolated."
+    note: "Auto-generated by scraper. Aggregator daily, quotes weekly (Mondays)."
 };

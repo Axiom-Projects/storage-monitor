@@ -1088,6 +1088,13 @@ function buildDataFile(existing, mergedPrices, dailyDeals, aggregatorPrices, quo
     const providersMatch = existingContent.match(/const PROVIDERS = \{[\s\S]*?\n\};/);
     const providersBlock = providersMatch ? providersMatch[0] : "";
 
+    // Preserve manually-maintained, non-scraped blocks verbatim (insurance + fees).
+    // These are researched by hand, not scraped, so carry them through untouched.
+    const insuranceMatch = existingContent.match(/const INSURANCE = \{[\s\S]*?\n\};/);
+    const insuranceBlock = insuranceMatch ? insuranceMatch[0] : "const INSURANCE = {};";
+    const adminFeesMatch = existingContent.match(/const ADMIN_FEES = \{[\s\S]*?\n\};/);
+    const adminFeesBlock = adminFeesMatch ? adminFeesMatch[0] : "const ADMIN_FEES = {};";
+
     return `// ============================================================
 // STORAGE MONITOR - DATA FILE
 // This file is auto-updated by the scraper (GitHub Action)
@@ -1102,6 +1109,12 @@ const CURRENT_PRICES = ${JSON.stringify(mergedPrices, null, 4)};
 
 // Active deals & offers
 const CURRENT_DEALS = ${JSON.stringify(newDeals, null, 4)};
+
+// Insurance / contents protection (manually maintained — preserved across scrapes)
+${insuranceBlock}
+
+// One-off / upfront fees (manually maintained — preserved across scrapes)
+${adminFeesBlock}
 
 // Historical price data
 const PRICE_HISTORY = ${JSON.stringify(filteredHistory, null, 4)};
