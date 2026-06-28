@@ -963,25 +963,27 @@ async function main() {
 // ============================================================
 // DATA FILE MANAGEMENT
 // ============================================================
+// Multi-site: the scraper only has live scraping flows for the ISLINGTON site, so it
+// reads/writes SITES.islington and preserves the other sites untouched. The whole SITES
+// object is extracted so buildDataFile can re-emit it with only Islington's scraped
+// blocks rebuilt (providers/insurance/adminFees + bayswater/victoria are preserved).
 function readExistingData() {
     try {
         const content = fs.readFileSync(DATA_FILE, "utf-8");
-        const extract = (varName) => {
-            const regex = new RegExp(`const ${varName}\\s*=\\s*([\\s\\S]*?);\\s*(?:const |\/\/|$)`, "m");
-            const match = content.match(regex);
-            if (match) { try { return eval(`(${match[1]})`); } catch { return null; } }
-            return null;
-        };
+        const m = content.match(/const SITES\s*=\s*(\{[\s\S]*?\n\});/);
+        const sites = m ? (() => { try { return eval(`(${m[1]})`); } catch { return null; } })() : null;
+        const isl = (sites && sites.islington) || {};
         return {
-            currentPrices: extract("CURRENT_PRICES"),
-            priceHistory: extract("PRICE_HISTORY"),
-            priceChanges: extract("PRICE_CHANGES"),
-            currentDeals: extract("CURRENT_DEALS"),
-            dealsHistory: extract("DEALS_HISTORY"),
-            scrapeStatus: extract("SCRAPE_STATUS")
+            sites,
+            currentPrices: isl.currentPrices || null,
+            priceHistory: isl.priceHistory || [],
+            priceChanges: isl.priceChanges || [],
+            currentDeals: isl.currentDeals || {},
+            dealsHistory: isl.dealsHistory || [],
+            scrapeStatus: isl.scrapeStatus || {}
         };
     } catch {
-        return { currentPrices: null, priceHistory: [], priceChanges: [], currentDeals: {}, dealsHistory: [] };
+        return { sites: null, currentPrices: null, priceHistory: [], priceChanges: [], currentDeals: {}, dealsHistory: [], scrapeStatus: {} };
     }
 }
 
@@ -1083,62 +1085,70 @@ function buildDataFile(existing, mergedPrices, dailyDeals, aggregatorPrices, quo
     yearAgo.setFullYear(yearAgo.getFullYear() - 1);
     const filteredHistory = history.filter(h => new Date(h.date) >= yearAgo);
 
-    // Read PROVIDERS block from existing file
-    const existingContent = fs.readFileSync(DATA_FILE, "utf-8");
-    const providersMatch = existingContent.match(/const PROVIDERS = \{[\s\S]*?\n\};/);
-    const providersBlock = providersMatch ? providersMatch[0] : "";
+    // Multi-site emit: rebuild ONLY Islington's scraped blocks; preserve everything else
+    // (Islington providers/insurance/adminFees + the bayswater/victoria sites) via spread.
+    const existingSites = existing.sites || {};
+    const islington = {
+        ...(existingSites.islington || {}),
+        currentPrices: mergedPrices,
+        currentDeals: newDeals,
+        priceHistory: filteredHistory,
+        priceChanges: newChanges,
+        dealsHistory: dealsHistory,
+        scrapeStatus: scrapeStatus
+    };
+    const SITES = { ...existingSites, islington };
 
-    // Preserve manually-maintained, non-scraped blocks verbatim (insurance + fees).
-    // These are researched by hand, not scraped, so carry them through untouched.
-    const insuranceMatch = existingContent.match(/const INSURANCE = \{[\s\S]*?\n\};/);
-    const insuranceBlock = insuranceMatch ? insuranceMatch[0] : "const INSURANCE = {};";
-    const adminFeesMatch = existingContent.match(/const ADMIN_FEES = \{[\s\S]*?\n\};/);
-    const adminFeesBlock = adminFeesMatch ? adminFeesMatch[0] : "const ADMIN_FEES = {};";
+    const meta = {
+        lastScraped: new Date().toISOString(),
+        scraperVersion: "5.0.0",
+        location: "Multi-site (Islington, Bayswater, Victoria/Pimlico)",
+        note: "Multi-site. Scraper rebuilds Islington's scraped blocks; per-site INSURANCE/ADMIN_FEES + non-Islington sites are manually maintained and preserved."
+    };
 
     return `// ============================================================
-// STORAGE MONITOR - DATA FILE
-// This file is auto-updated by the scraper (GitHub Action)
-// Manual edits will be overwritten on next scrape run
+// STORAGE MONITOR - DATA FILE  (multi-site)
+// Scraped blocks (prices/deals/history/status) are auto-updated by the scraper.
+// Per-site INSURANCE + ADMIN_FEES, and the bayswater/victoria sites, are
+// manually maintained and PRESERVED across scrape runs.
 // ============================================================
 
-${providersBlock}
+const SITES = ${JSON.stringify(SITES, null, 4)};
 
-// Current prices per week in GBP, keyed by provider then size (sqft)
-// Last updated: ${today}
-const CURRENT_PRICES = ${JSON.stringify(mergedPrices, null, 4)};
+const DEFAULT_SITE = "islington";
 
-// Active deals & offers
-const CURRENT_DEALS = ${JSON.stringify(newDeals, null, 4)};
+// Active-site bindings. The render layer (app.js) reads these globals, so a site
+// switch is just loadSite(key) + re-render. They are 'let' so they can be repointed.
+let ACTIVE_SITE, PROVIDERS, CURRENT_PRICES, CURRENT_DEALS, PRICE_HISTORY,
+    PRICE_CHANGES, DEALS_HISTORY, SCRAPE_STATUS, INSURANCE, ADMIN_FEES;
 
-// Insurance / contents protection (manually maintained — preserved across scrapes)
-${insuranceBlock}
-
-// One-off / upfront fees (manually maintained — preserved across scrapes)
-${adminFeesBlock}
-
-// Historical price data
-const PRICE_HISTORY = ${JSON.stringify(filteredHistory, null, 4)};
-
-// Price change log
-const PRICE_CHANGES = ${JSON.stringify(newChanges, null, 4)};
-
-// Deals history
-const DEALS_HISTORY = ${JSON.stringify(dealsHistory, null, 4)};
-
-// Scrape status
-const SCRAPE_STATUS = ${JSON.stringify(scrapeStatus, null, 4)};
+function loadSite(key) {
+    const s = SITES[key];
+    if (!s) return false;
+    ACTIVE_SITE = key;
+    PROVIDERS = s.providers;
+    CURRENT_PRICES = s.currentPrices;
+    CURRENT_DEALS = s.currentDeals;
+    PRICE_HISTORY = s.priceHistory;
+    PRICE_CHANGES = s.priceChanges;
+    DEALS_HISTORY = s.dealsHistory;
+    SCRAPE_STATUS = s.scrapeStatus;
+    INSURANCE = s.insurance;
+    ADMIN_FEES = s.adminFees;
+    return true;
+}
+loadSite(DEFAULT_SITE);
 
 // Metadata
-const DATA_META = {
-    lastScraped: "${new Date().toISOString()}",
-    scraperVersion: "4.0.0",
-    location: "Islington, N1",
-    note: "Auto-generated by scraper. Aggregator daily, quotes weekly (Mondays)."
-};
+const DATA_META = ${JSON.stringify(meta, null, 4)};
 `;
 }
 
-main().catch(err => {
-    console.error("Fatal error:", err);
-    process.exit(1);
-});
+if (require.main === module) {
+    main().catch(err => {
+        console.error("Fatal error:", err);
+        process.exit(1);
+    });
+}
+
+module.exports = { readExistingData, buildDataFile };

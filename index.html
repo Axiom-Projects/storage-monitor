@@ -29,7 +29,8 @@
         <header>
             <div class="header-left">
                 <h1>Storage Monitor</h1>
-                <span class="location-badge">Islington, N1</span>
+                <select id="site-select" class="site-select" aria-label="Select site"></select>
+                <span class="location-badge" id="location-badge">Islington, N1</span>
             </div>
             <div class="header-right">
                 <span id="last-updated" class="last-updated"></span>
@@ -115,17 +116,18 @@
         <!-- Insurance & Fees -->
         <section class="card">
             <h2>Insurance &amp; Upfront Fees <span class="unit-label" id="fees-size-label">(all-in at 50 sqft)</span></h2>
-            <p style="color:var(--text-muted); font-size:13px; margin-bottom:16px">
-                Contents protection is <strong>mandatory</strong> at every provider and billed on top of rent &mdash; often a big hidden cost.
-                <strong>All-in/wk</strong> = rent at the selected size + entry-level insurance. Many operators only reveal exact figures on a quote
-                (shown as <em>Quote only</em>). Figures researched manually; <span class="conf-dot conf-low"></span> marks low-confidence / unpublished.
+            <p style="color:var(--text-muted); font-size:13px; margin-bottom:10px">
+                Metro bundles contents protection <strong>free</strong> (cover scales with unit size). Competitors charge it <strong>on top of rent</strong>, so the fair
+                comparison is <strong>all-in = rent + insurance for the same cover Metro includes</strong>. The Insurance column is <strong>cover-matched</strong> to that level.
+                Many operators only quote on request (<em>Quote only</em>); <span class="conf-dot conf-low"></span> marks low-confidence / unpublished.
             </p>
+            <div id="fees-cover-note" style="font-size:13px; color:var(--text); margin-bottom:16px; padding:10px 12px; background:var(--surface2); border-radius:var(--radius-sm)"></div>
             <div class="table-wrapper">
                 <table id="fees-table">
                     <thead>
                         <tr>
                             <th>Provider</th>
-                            <th>Insurance (entry)</th>
+                            <th>Insurance (match cover)</th>
                             <th>Product</th>
                             <th>Upfront fees</th>
                             <th>Rent/Wk</th>

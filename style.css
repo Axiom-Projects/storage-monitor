@@ -360,3 +360,11 @@ footer {
 .tier-prov { font-weight: 700; }
 .tier-brand { color: var(--text-muted); font-size: 12px; }
 .tier-body { color: var(--text); flex: 1 1 280px; }
+
+/* --- Multi-site selector --- */
+.site-select {
+    background: var(--surface2); border: 1px solid var(--border); color: var(--text);
+    padding: 6px 12px; border-radius: var(--radius-sm); font-size: 14px; font-weight: 600;
+    cursor: pointer; margin-left: 4px;
+}
+.site-select:hover { border-color: var(--text-muted); }

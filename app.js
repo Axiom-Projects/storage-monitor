@@ -22,8 +22,35 @@
         }
         document.getElementById("login-form").addEventListener("submit", handleLogin);
         document.getElementById("logout-btn").addEventListener("click", handleLogout);
+        setupSiteSelector();
         setupSizeButtons();
         setupTimeButtons();
+    }
+
+    // --- Multi-site ---
+    function setupSiteSelector() {
+        const sel = document.getElementById("site-select");
+        if (!sel || typeof SITES === "undefined") return;
+        sel.innerHTML = Object.entries(SITES)
+            .map(([key, s]) => `<option value="${key}">${s.label}</option>`).join("");
+        sel.value = ACTIVE_SITE;
+        sel.addEventListener("change", () => switchSite(sel.value));
+    }
+
+    function switchSite(key) {
+        if (!loadSite(key)) return;
+        applyOverrides();
+        refreshManualProviders();
+        updateSiteChrome();
+        renderAll();
+    }
+
+    function updateSiteChrome() {
+        const s = SITES[ACTIVE_SITE];
+        const badge = document.getElementById("location-badge");
+        if (badge && s) badge.textContent = s.locationBadge;
+        const sel = document.getElementById("site-select");
+        if (sel) sel.value = ACTIVE_SITE;
     }
 
     // --- Auth ---
@@ -53,6 +80,7 @@
         document.getElementById("dashboard").style.display = "block";
         applyOverrides();
         setupManualEntry();
+        updateSiteChrome();
         renderAll();
     }
 
@@ -99,7 +127,13 @@
         document.getElementById("table-size-label").textContent = `(${selectedSize} sqft)`;
         document.getElementById("chart-size-label").textContent = `(${selectedSize} sqft/week)`;
         const fl = document.getElementById("fees-size-label");
-        if (fl) fl.textContent = `(all-in at ${selectedSize} sqft)`;
+        if (fl) {
+            const tc = (typeof INSURANCE !== "undefined" && INSURANCE.metro && INSURANCE.metro.coverBySize)
+                ? INSURANCE.metro.coverBySize[selectedSize] : null;
+            fl.textContent = tc
+                ? `(all-in at ${selectedSize} sqft · £${(tc / 1000).toFixed(tc % 1000 ? 1 : 0)}k cover)`
+                : `(all-in at ${selectedSize} sqft)`;
+        }
     }
 
     function renderLastUpdated() {
@@ -111,36 +145,48 @@
     // --- Summary Cards ---
     function renderSummaryCards() {
         const size = selectedSize;
-        const myPrice = CURRENT_PRICES.metro[size];
+        const hasNum = v => typeof v === "number" && !isNaN(v);
+        const myPrice = CURRENT_PRICES.metro ? CURRENT_PRICES.metro[size] : undefined;
         const competitorPrices = Object.entries(CURRENT_PRICES)
             .filter(([k]) => k !== "metro")
             .map(([k, v]) => ({ provider: k, price: v[size] }))
+            .filter(p => hasNum(p.price))
             .sort((a, b) => a.price - b.price);
 
-        // Position
-        const allPrices = Object.entries(CURRENT_PRICES)
-            .map(([k, v]) => ({ provider: k, price: v[size] }))
-            .sort((a, b) => a.price - b.price);
-        const position = allPrices.findIndex(p => p.provider === "metro") + 1;
         const posEl = document.getElementById("your-position");
-        posEl.textContent = `#${position} of ${allPrices.length}`;
-        posEl.style.color = position === 1 ? "var(--green)" : position <= 2 ? "var(--amber)" : "var(--red)";
-        document.getElementById("your-position-detail").textContent =
-            position === 1 ? "Cheapest in market" : `${formatGBP(myPrice)}/wk vs cheapest ${formatGBP(allPrices[0].price)}/wk`;
-
-        // Market average
-        const compAvg = competitorPrices.reduce((s, p) => s + p.price, 0) / competitorPrices.length;
+        const posDetail = document.getElementById("your-position-detail");
         const avgEl = document.getElementById("market-avg");
-        avgEl.textContent = formatGBP(compAvg);
-        const diff = myPrice - compAvg;
-        const pctDiff = ((diff / compAvg) * 100).toFixed(0);
         const detailEl = document.getElementById("market-avg-detail");
-        if (diff < 0) {
-            detailEl.textContent = `You're ${formatGBP(Math.abs(diff))} below avg (${Math.abs(pctDiff)}% cheaper)`;
-            detailEl.style.color = "var(--green)";
+
+        // Position (needs your price + at least one competitor price)
+        if (hasNum(myPrice) && competitorPrices.length) {
+            const allPrices = [{ provider: "metro", price: myPrice }, ...competitorPrices]
+                .sort((a, b) => a.price - b.price);
+            const position = allPrices.findIndex(p => p.provider === "metro") + 1;
+            posEl.textContent = `#${position} of ${allPrices.length}`;
+            posEl.style.color = position === 1 ? "var(--green)" : position <= 2 ? "var(--amber)" : "var(--red)";
+            posDetail.textContent = position === 1
+                ? "Cheapest in market"
+                : `${formatGBP(myPrice)}/wk vs cheapest ${formatGBP(allPrices[0].price)}/wk`;
+
+            const compAvg = competitorPrices.reduce((s, p) => s + p.price, 0) / competitorPrices.length;
+            avgEl.textContent = formatGBP(compAvg);
+            const diff = myPrice - compAvg;
+            const pctDiff = ((diff / compAvg) * 100).toFixed(0);
+            if (diff < 0) {
+                detailEl.textContent = `You're ${formatGBP(Math.abs(diff))} below avg (${Math.abs(pctDiff)}% cheaper)`;
+                detailEl.style.color = "var(--green)";
+            } else {
+                detailEl.textContent = `You're ${formatGBP(diff)} above avg (${pctDiff}% pricier)`;
+                detailEl.style.color = "var(--red)";
+            }
         } else {
-            detailEl.textContent = `You're ${formatGBP(diff)} above avg (${pctDiff}% pricier)`;
-            detailEl.style.color = "var(--red)";
+            posEl.textContent = "—";
+            posEl.style.color = "var(--text-muted)";
+            posDetail.textContent = hasNum(myPrice) ? "No competitor prices yet" : "Awaiting your price";
+            avgEl.textContent = competitorPrices.length ? formatGBP(competitorPrices.reduce((s, p) => s + p.price, 0) / competitorPrices.length) : "—";
+            detailEl.textContent = competitorPrices.length ? `${competitorPrices.length} competitor price(s) on record` : "No price data yet";
+            detailEl.style.color = "var(--text-muted)";
         }
 
         // Active deals
@@ -190,16 +236,20 @@
             }
         });
 
-        // Check if any competitor is now cheaper than you
-        Object.entries(CURRENT_PRICES).forEach(([key, prices]) => {
-            if (key === "metro") return;
-            if (prices[selectedSize] < CURRENT_PRICES.metro[selectedSize]) {
-                alerts.push(
-                    `<strong>${PROVIDERS[key].name}</strong> is cheaper than you at ${selectedSize}sqft ` +
-                    `(${formatGBP(prices[selectedSize])}/wk vs your ${formatGBP(CURRENT_PRICES.metro[selectedSize])}/wk)`
-                );
-            }
-        });
+        // Check if any competitor is now cheaper than you (both prices must exist)
+        const myP = CURRENT_PRICES.metro ? CURRENT_PRICES.metro[selectedSize] : undefined;
+        if (typeof myP === "number") {
+            Object.entries(CURRENT_PRICES).forEach(([key, prices]) => {
+                if (key === "metro") return;
+                const p = prices[selectedSize];
+                if (typeof p === "number" && p < myP) {
+                    alerts.push(
+                        `<strong>${PROVIDERS[key].name}</strong> is cheaper than you at ${selectedSize}sqft ` +
+                        `(${formatGBP(p)}/wk vs your ${formatGBP(myP)}/wk)`
+                    );
+                }
+            });
+        }
 
         const banner = document.getElementById("alerts-banner");
         const content = document.getElementById("alerts-content");
@@ -214,34 +264,30 @@
     // --- Price Table ---
     function renderPriceTable() {
         const size = selectedSize;
-        const myPrice = CURRENT_PRICES.metro[size];
+        const has = v => typeof v === "number" && !isNaN(v);
+        const myPrice = CURRENT_PRICES.metro ? CURRENT_PRICES.metro[size] : undefined;
+        const dash = '<span class="price-muted">—</span>';
         const rows = Object.entries(CURRENT_PRICES)
             .map(([key, prices]) => {
                 const price = prices[size];
                 const provider = PROVIDERS[key];
                 const deal = CURRENT_DEALS[key];
-                const perSqft = (price / size).toFixed(2);
-                const fourWeekly = (price * 4).toFixed(2);
+                const hasP = has(price);
 
-                let effectiveWeekly = price;
-                if (deal && deal.active && deal.discountPct > 0) {
-                    effectiveWeekly = price * (1 - deal.discountPct / 100);
-                }
+                let effectiveWeekly = hasP
+                    ? (deal && deal.active && deal.discountPct > 0 ? price * (1 - deal.discountPct / 100) : price)
+                    : null;
 
-                let vsYou = "";
-                let vsClass = "";
+                let vsYou = "", vsClass = "";
                 if (!provider.isYou) {
-                    const diff = price - myPrice;
-                    const pct = ((diff / myPrice) * 100).toFixed(0);
-                    if (diff > 0) {
-                        vsYou = `+${formatGBP(diff)} (+${pct}%)`;
-                        vsClass = "pricier";
-                    } else if (diff < 0) {
-                        vsYou = `${formatGBP(diff)} (${pct}%)`;
-                        vsClass = "cheaper";
+                    if (hasP && has(myPrice)) {
+                        const diff = price - myPrice;
+                        const pct = ((diff / myPrice) * 100).toFixed(0);
+                        if (diff > 0) { vsYou = `+${formatGBP(diff)} (+${pct}%)`; vsClass = "pricier"; }
+                        else if (diff < 0) { vsYou = `${formatGBP(diff)} (${pct}%)`; vsClass = "cheaper"; }
+                        else { vsYou = "Same"; vsClass = "price-same"; }
                     } else {
-                        vsYou = "Same";
-                        vsClass = "price-same";
+                        vsYou = "n/a"; vsClass = "price-muted";
                     }
                 }
 
@@ -249,27 +295,28 @@
                     key,
                     name: provider.name + (provider.isYou ? " (You)" : ""),
                     isYou: provider.isYou,
-                    price,
-                    fourWeekly,
-                    perSqft,
+                    hasP,
+                    price: hasP ? formatGBP(price) : dash,
+                    fourWeekly: hasP ? formatGBP(price * 4) : dash,
+                    perSqft: hasP ? formatGBP(price / size) : dash,
                     deal: deal && deal.active ? deal.text : "—",
                     dealActive: deal && deal.active,
-                    effectiveWeekly: formatGBP(effectiveWeekly),
-                    vsYou,
-                    vsClass
+                    effectiveWeekly: effectiveWeekly != null ? `${formatGBP(effectiveWeekly)}/wk` : dash,
+                    vsYou, vsClass,
+                    sortKey: hasP ? price : Infinity
                 };
             })
-            .sort((a, b) => a.price - b.price);
+            .sort((a, b) => a.sortKey - b.sortKey);
 
         const tbody = document.getElementById("price-table-body");
         tbody.innerHTML = rows.map(r => `
             <tr class="${r.isYou ? "is-you" : ""}">
                 <td>${r.name}</td>
-                <td>${formatGBP(r.price)}</td>
-                <td>${formatGBP(r.fourWeekly)}</td>
-                <td>${formatGBP(r.perSqft)}</td>
+                <td>${r.price}</td>
+                <td>${r.fourWeekly}</td>
+                <td>${r.perSqft}</td>
                 <td>${r.dealActive ? `<span class="deal-badge">${r.deal}</span>` : r.deal}</td>
-                <td>${r.effectiveWeekly}/wk</td>
+                <td>${r.effectiveWeekly}</td>
                 <td class="${r.vsClass}">${r.isYou ? "—" : r.vsYou}</td>
             </tr>
         `).join("");
@@ -508,33 +555,68 @@
     }
 
     // --- Insurance & Upfront Fees ---
+    // Weekly insurance cost for a given cover level, per a provider's insurance model.
+    // Returns {known, weekly, included, approx, aboveLadder}; known=false => quote-only.
+    function insWeeklyForCover(ins, cover) {
+        if (!ins) return { known: false };
+        if (ins.model === "included") return { known: true, weekly: 0, included: true };
+        if (cover == null) {  // no target cover -> fall back to a provider's published entry
+            return (ins.entryWeekly === 0 || ins.entryWeekly)
+                ? { known: true, weekly: ins.entryWeekly, approx: ins.model === "rate" }
+                : { known: false };
+        }
+        if (ins.model === "tiered" && ins.tiers && ins.tiers.length) {
+            const tier = ins.tiers.find(t => t.coverGBP >= cover);
+            if (!tier) return { known: false, aboveLadder: true };   // higher tiers quote-only
+            const wk = tier.period === "month" ? tier.costGBP * 12 / 52 : tier.costGBP;
+            return { known: true, weekly: +wk.toFixed(2), approx: tier.period === "month" };
+        }
+        if (ins.model === "rate" && ins.ratePer1000) {
+            const billCover = Math.max(cover, ins.minCoverGBP || 0);
+            const per = ins.ratePeriod === "month" ? 12 / 52 : 1;
+            const wk = ins.ratePer1000 * (billCover / 1000) * per;
+            return { known: true, weekly: +wk.toFixed(2), approx: true };
+        }
+        return { known: false };   // quote-only / unknown
+    }
+
     function renderInsuranceFees() {
         if (typeof INSURANCE === "undefined" || typeof ADMIN_FEES === "undefined") return;
         const size = selectedSize;
-        const metroIns = INSURANCE.metro ? (INSURANCE.metro.entryWeekly || 0) : 0;
+        // Cover Metro includes free at this size = the cover competitors must match.
+        const targetCover = (INSURANCE.metro && INSURANCE.metro.coverBySize)
+            ? INSURANCE.metro.coverBySize[size] : null;
         const myRent = CURRENT_PRICES.metro ? CURRENT_PRICES.metro[size] : null;
-        const myAllIn = myRent != null ? myRent + metroIns : null;
+        const myAllIn = myRent != null ? myRent : null;   // Metro insurance is included (£0)
+
+        // Headline cover note for this size
+        const coverNote = document.getElementById("fees-cover-note");
+        if (coverNote) {
+            coverNote.innerHTML = targetCover
+                ? `At <strong>${size} sqft</strong>, Metro includes <strong>£${(targetCover / 1000).toFixed(targetCover % 1000 ? 1 : 0)}k</strong> of cover free. The Insurance column shows what each competitor would charge to match that cover, <em>added on top of rent</em>.`
+                : `Insurance is mandatory everywhere. The Insurance column shows each provider's cover cost added on top of rent.`;
+        }
 
         const rows = Object.keys(PROVIDERS).map(key => {
             const provider = PROVIDERS[key];
             const ins = INSURANCE[key] || {};
             const fee = ADMIN_FEES[key] || {};
             const rent = CURRENT_PRICES[key] ? CURRENT_PRICES[key][size] : null;
-            const insWeekly = (ins.entryWeekly === 0 || ins.entryWeekly) ? ins.entryWeekly : null;
+            const cov = insWeeklyForCover(ins, targetCover);
+            const insWeekly = cov.known ? cov.weekly : null;
             const allIn = (rent != null && insWeekly != null) ? rent + insWeekly : null;
 
-            // Insurance cell
+            // Insurance cell (cover-matched to Metro's included cover for this size)
             let insCell, insSub = "";
-            if (ins.model === "included") {
+            if (cov.included) {
                 insCell = '<span class="cheaper">Free (incl.)</span>';
-                insSub = "up to £14k cover";
-            } else if (insWeekly != null) {
-                const approx = ins.model === "rate" ? "≈ " : "";
-                insCell = `${approx}${formatGBP(insWeekly)}/wk`;
-                const t = (ins.tiers && ins.tiers[0]) ? ins.tiers[0].coverGBP : null;
-                insSub = t ? `£${(t / 1000).toFixed(0)}k cover` : "";
+                insSub = targetCover ? `£${(targetCover / 1000).toFixed(targetCover % 1000 ? 1 : 0)}k cover incl.` : "included";
+            } else if (cov.known) {
+                insCell = `${cov.approx ? "≈ " : ""}${formatGBP(insWeekly)}/wk`;
+                insSub = "added on top";
             } else {
                 insCell = '<span class="quote-only">Quote only</span>';
+                if (cov.aboveLadder) insSub = "above published tiers";
             }
 
             // Upfront fees cell
@@ -550,7 +632,7 @@
                 feeCell = '<span class="quote-only">Quote only</span>';
             }
 
-            // vs You (all-in basis)
+            // vs You (all-in basis: rent + cover-matched insurance)
             let vsYou = "", vsClass = "";
             if (!provider.isYou) {
                 if (allIn == null || myAllIn == null) {
@@ -592,7 +674,10 @@
             if (!ins) return "";
             let body;
             if (ins.model === "included") {
-                body = '<span class="cheaper">Included free</span> up to £14,000 cover (scales with unit size); excess £4 per £1,000 / 4wks';
+                const scale = ins.coverBySize
+                    ? Object.entries(ins.coverBySize).map(([s, c]) => `${s}sqft → £${(c / 1000).toFixed(c % 1000 ? 1 : 0)}k`).join(" &middot; ")
+                    : "scales with unit size";
+                body = `<span class="cheaper">Included free</span>, cover by size: ${scale}; excess £4 per £1,000 / 4wks`;
             } else if (ins.tiers && ins.tiers.length) {
                 body = ins.tiers.map(t => {
                     const per = t.period === "month" ? "/mo" : "/wk";
@@ -622,11 +707,12 @@
         return String(s || "").replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;");
     }
 
-    // --- Manual Price Overrides ---
+    // --- Manual Price Overrides (namespaced per site) ---
     const OVERRIDES_KEY = "storage_monitor_overrides";
+    function overridesKey() { return `${OVERRIDES_KEY}:${ACTIVE_SITE}`; }
 
     function getOverrides() {
-        try { return JSON.parse(localStorage.getItem(OVERRIDES_KEY)) || {}; } catch { return {}; }
+        try { return JSON.parse(localStorage.getItem(overridesKey())) || {}; } catch { return {}; }
     }
 
     function applyOverrides() {
@@ -640,15 +726,16 @@
         }
     }
 
-    function setupManualEntry() {
-        // Populate provider dropdown
+    function refreshManualProviders() {
         const select = document.getElementById("manual-provider");
-        Object.entries(PROVIDERS).forEach(([key, p]) => {
-            const opt = document.createElement("option");
-            opt.value = key;
-            opt.textContent = p.name + (p.isYou ? " (You)" : "");
-            select.appendChild(opt);
-        });
+        if (!select) return;
+        select.innerHTML = Object.entries(PROVIDERS)
+            .map(([key, p]) => `<option value="${key}">${p.name}${p.isYou ? " (You)" : ""}</option>`).join("");
+        renderOverridesList();
+    }
+
+    function setupManualEntry() {
+        refreshManualProviders();
 
         document.getElementById("manual-save-btn").addEventListener("click", () => {
             const provider = document.getElementById("manual-provider").value;
@@ -659,7 +746,7 @@
             const overrides = getOverrides();
             if (!overrides[provider]) overrides[provider] = {};
             overrides[provider][size] = price;
-            localStorage.setItem(OVERRIDES_KEY, JSON.stringify(overrides));
+            localStorage.setItem(overridesKey(), JSON.stringify(overrides));
 
             document.getElementById("manual-price").value = "";
             applyOverrides();
@@ -667,12 +754,9 @@
         });
 
         document.getElementById("manual-clear-btn").addEventListener("click", () => {
-            localStorage.removeItem(OVERRIDES_KEY);
-            // Reload to reset CURRENT_PRICES from data.js
+            localStorage.removeItem(overridesKey());  // clears overrides for the active site only
             location.reload();
         });
-
-        renderOverridesList();
     }
 
     function renderOverridesList() {

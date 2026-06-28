@@ -1,728 +1,58 @@
 // ============================================================
-// STORAGE MONITOR - DATA FILE
-// This file is auto-updated by the scraper (GitHub Action)
-// Manual edits will be overwritten on next scrape run
+// STORAGE MONITOR - DATA FILE  (multi-site)
+// Scraped blocks (prices/deals/history/status) are auto-updated by the scraper.
+// Per-site INSURANCE + ADMIN_FEES, and the bayswater/victoria sites, are
+// manually maintained and PRESERVED across scrape runs.
 // ============================================================
 
-const PROVIDERS = {
-    metro: {
-        name: "Metro Storage",
-        shortName: "Metro",
-        isYou: true,
-        url: "https://www.metro-storage.co.uk/self-storage-n1/",
-        color: "#6366f1",
-        location: "Islington, N1"
-    },
-    access: {
-        name: "Access Self Storage",
-        shortName: "Access",
-        isYou: false,
-        url: "https://www.accessstorage.com/central-london/access-self-storage-islington",
-        color: "#3b82f6",
-        location: "Islington"
-    },
-    urban: {
-        name: "Urban Locker",
-        shortName: "Urban Locker",
-        isYou: false,
-        url: "https://www.urbanlocker.co.uk/storage/islington/",
-        color: "#22c55e",
-        location: "Islington"
-    },
-    safestore: {
-        name: "Safestore",
-        shortName: "Safestore",
-        isYou: false,
-        url: "https://www.safestore.co.uk/self-storage/london/north/kings-cross/",
-        color: "#f59e0b",
-        location: "Kings Cross"
-    },
-    bigyellow: {
-        name: "Big Yellow",
-        shortName: "Big Yellow",
-        isYou: false,
-        url: "https://www.bigyellow.co.uk/kings-cross-self-storage-units",
-        color: "#ef4444",
-        location: "Kings Cross"
-    }
-};
-
-// Current prices per week in GBP, keyed by provider then size (sqft)
-// Last updated: 2026-06-22
-const CURRENT_PRICES = {
-    "metro": {
-        "25": 46.75,
-        "50": 78.5,
-        "75": 101.25,
-        "100": 123.75,
-        "150": 188.75
-    },
-    "access": {
-        "25": 45.69,
-        "50": 66.23,
-        "75": 108.92,
-        "100": 137.77,
-        "150": 223.85
-    },
-    "urban": {
-        "10": 28.59,
-        "25": 57.93,
-        "35": 71.16,
-        "50": 74.95,
-        "75": 100.17,
-        "100": 135.31,
-        "125": 170.45,
-        "150": 210.67
-    },
-    "safestore": {
-        "25": 51.49,
-        "50": 91.99,
-        "75": 125.49,
-        "100": 120.49,
-        "150": 258.99
-    },
-    "bigyellow": {
-        "25": 55.2,
-        "50": 65.1,
-        "75": 94.5,
-        "100": 104.4,
-        "150": 162.9
-    }
-};
-
-// Active deals & offers
-const CURRENT_DEALS = {
-    "metro": {
-        "active": true,
-        "text": "50% off your first 8 weeks",
-        "discountPct": 50,
-        "maxWeeks": 8,
-        "firstSeen": "2026-03-14",
-        "lastSeen": "2026-06-22"
-    },
-    "access": {
-        "active": true,
-        "text": "50% off up to 13 weeks storage",
-        "discountPct": 50,
-        "maxWeeks": 13,
-        "firstSeen": "2026-01-15",
-        "lastSeen": "2026-06-22"
-    },
-    "urban": {
-        "active": true,
-        "text": "50% off your first two months",
-        "discountPct": 50,
-        "maxWeeks": 0,
-        "firstSeen": "2026-03-14",
-        "lastSeen": "2026-06-22"
-    },
-    "safestore": {
-        "active": true,
-        "text": "50% off storage for 8 weeks",
-        "discountPct": 50,
-        "maxWeeks": 8,
-        "firstSeen": "2026-06-22",
-        "lastSeen": "2026-06-22"
-    },
-    "bigyellow": {
-        "active": true,
-        "text": "50% off for up to 8 weeks",
-        "discountPct": 50,
-        "maxWeeks": 8,
-        "firstSeen": "2026-06-22",
-        "lastSeen": "2026-06-22"
-    }
-};
-
-// ============================================================
-// INSURANCE / CONTENTS PROTECTION  (researched 2026-06-28, manually maintained)
-// UK self-storage insurance is normally MANDATORY and tiered by the declared value
-// of goods. Most operators DON'T publish a full ladder (quote-only) — we record only
-// figures confirmed from each provider's own pages. `entryWeekly` is a normalised
-// £/week entry cost for like-for-like comparison (converted where a provider quotes
-// monthly; null where not published). NOT auto-scraped — the daily scraper preserves
-// this block. model: included | rate | tiered | quote-only.
-const INSURANCE = {
-    metro: {
-        brand: "StoreReady Contents Protection",
-        mandatory: true,
-        model: "included",
-        published: "full",
-        entryWeekly: 0,
-        tiers: [],
-        note: "Cover INCLUDED FREE in the rent, scaling with unit size (~£2,000 for a 20 sqft room) up to a max £14,000. Only excess above £14,000 is charged: £4 per £1,000 per 4 weeks.",
-        confidence: "high",
-        source: "https://www.metro-storage.co.uk/knowledge-centre/i-insure-goods/",
-        lastResearched: "2026-06-28"
-    },
-    access: {
-        brand: "Contents Protection",
-        mandatory: true,
-        model: "rate",
-        published: "partial",
-        entryWeekly: 1.72,
-        ratePer1000: 1.86,
-        ratePeriod: "month",
-        minCoverGBP: 4000,
-        tiers: [
-            { coverGBP: 4000, costGBP: 7.44, period: "month", derived: true }
-        ],
-        note: "Priced 'from £1.86 per £1,000 of cover / calendar month', minimum £4,000 cover. No public ladder — entry tier derived from the published rate. Weekly figure approximate (×12/52).",
-        confidence: "medium",
-        source: "https://www.accessstorage.com/self-storage-insurance",
-        lastResearched: "2026-06-28"
-    },
-    urban: {
-        brand: "StoreProtect",
-        mandatory: true,
-        model: "quote-only",
-        published: "none",
-        entryWeekly: null,
-        tiers: [],
-        note: "Goods protection mandatory (own policy or their StoreProtect). No cover tiers or prices published anywhere — disclosed only on a personalised quote.",
-        confidence: "low",
-        source: "https://www.urbanlocker.co.uk/faqs/",
-        lastResearched: "2026-06-28"
-    },
-    safestore: {
-        brand: "StoreProtect",
-        mandatory: true,
-        model: "quote-only",
-        published: "none",
-        entryWeekly: null,
-        tiers: [],
-        note: "Mandatory (own insurance or StoreProtect enhanced-liability). Value-tiered but no ladder published — quoted in store. Separate £50 claims-admin fee is deducted from any claim settlement.",
-        confidence: "low",
-        source: "https://www.safestore.co.uk/storeprotect/",
-        lastResearched: "2026-06-28"
-    },
-    bigyellow: {
-        brand: "Enhanced Liability Service",
-        mandatory: true,
-        model: "tiered",
-        published: "partial",
-        entryWeekly: 6.25,
-        tiers: [
-            { coverGBP: 4000, costGBP: 6.25, period: "week" },
-            { coverGBP: 6000, costGBP: 8.00, period: "week" }
-        ],
-        note: "Mandatory (own policy or their Enhanced Liability Service). From £6.25/wk for £4,000 cover; £8.00/wk for £6,000 (stated average). Higher tiers quote-only.",
-        confidence: "medium",
-        source: "https://www.bigyellow.co.uk/faqs/insurance-contents-protection/",
-        lastResearched: "2026-06-28"
-    }
-};
-
-// ============================================================
-// ONE-OFF / UPFRONT FEES  (researched 2026-06-28, manually maintained)
-// Non-recurring charges to start a unit. amountGBP null = exists but not published.
-// `totalUpfront` = sum of KNOWN mandatory one-off fees (refundable deposits excluded);
-// null when a mandatory fee exists but its amount is unknown. NOT auto-scraped.
-const ADMIN_FEES = {
-    metro: {
-        items: [
-            { type: "admin", label: "Admin / sign-up fee", amountGBP: 0, oneOff: true },
-            { type: "padlock", label: "Padlock", amountGBP: 0, oneOff: true, note: "Free use included" }
-        ],
-        totalUpfront: 0,
-        note: "All-inclusive: no admin/sign-up fee, free padlock.",
-        confidence: "high",
-        source: "https://www.metro-storage.co.uk/prices/",
-        lastResearched: "2026-06-28"
-    },
-    access: {
-        items: [
-            { type: "admin", label: "Admin fee", amountGBP: 0, oneOff: true },
-            { type: "deposit", label: "Deposit", amountGBP: 0, oneOff: true },
-            { type: "padlock", label: "Padlock (in-store)", amountGBP: 14, oneOff: true }
-        ],
-        totalUpfront: 14,
-        note: "No admin fee or deposit; padlock £14 in store if you need one.",
-        confidence: "medium",
-        source: "https://www.accessstorage.com/faqs",
-        lastResearched: "2026-06-28"
-    },
-    urban: {
-        items: [
-            { type: "padlock", label: "Padlock", amountGBP: 0, oneOff: true, note: "App access at Islington — no padlock needed" }
-        ],
-        totalUpfront: null,
-        note: "No fees published. Smartphone-app access (no padlock required). Admin/deposit not disclosed.",
-        confidence: "low",
-        source: "https://www.urbanlocker.co.uk/faqs/",
-        lastResearched: "2026-06-28"
-    },
-    safestore: {
-        items: [
-            { type: "deposit", label: "Security deposit", amountGBP: null, oneOff: true, note: "Required on move-in; amount not published" },
-            { type: "padlock", label: "Padlock (in-store)", amountGBP: null, oneOff: true },
-            { type: "admin", label: "Claims admin fee", amountGBP: 50, oneOff: false, note: "Deducted from any claim — not an upfront fee" }
-        ],
-        totalUpfront: null,
-        note: "Deposit + padlock required on move-in but amounts not published (quote/in-store). £50 claims-admin applies only on a claim.",
-        confidence: "low",
-        source: "https://www.safestore.co.uk/faqs/",
-        lastResearched: "2026-06-28"
-    },
-    bigyellow: {
-        items: [
-            { type: "admin", label: "Set-up fee", amountGBP: 0, oneOff: true },
-            { type: "deposit", label: "Security deposit (refundable)", amountGBP: null, oneOff: true, note: "= one week's rent; refunded on vacate" },
-            { type: "padlock", label: "Padlock (in-store)", amountGBP: null, oneOff: true }
-        ],
-        totalUpfront: 0,
-        note: "No set-up fee. Refundable deposit = one week's rent. Padlock sold in store (price not published).",
-        confidence: "medium",
-        source: "https://www.bigyellow.co.uk/faqs/payment/",
-        lastResearched: "2026-06-28"
-    }
-};
-
-// Historical price data
-const PRICE_HISTORY = [
-    {
-        "date": "2026-01-06",
-        "prices": {
+const SITES = {
+    "islington": {
+        "label": "Islington / Kings Cross",
+        "locationBadge": "Islington, N1",
+        "yourStore": "Metro Storage N1",
+        "providers": {
             "metro": {
-                "25": 28,
-                "50": 48,
-                "75": 65,
-                "100": 82,
-                "150": 115
+                "name": "Metro Storage",
+                "shortName": "Metro",
+                "isYou": true,
+                "url": "https://www.metro-storage.co.uk/self-storage-n1/",
+                "color": "#6366f1",
+                "location": "Islington, N1"
             },
             "access": {
-                "25": 30,
-                "50": 52,
-                "75": 70,
-                "100": 89,
-                "150": 126
+                "name": "Access Self Storage",
+                "shortName": "Access",
+                "isYou": false,
+                "url": "https://www.accessstorage.com/central-london/access-self-storage-islington",
+                "color": "#3b82f6",
+                "location": "Islington"
             },
             "urban": {
-                "25": 29,
-                "50": 50,
-                "75": 67,
-                "100": 85,
-                "150": 120
+                "name": "Urban Locker",
+                "shortName": "Urban Locker",
+                "isYou": false,
+                "url": "https://www.urbanlocker.co.uk/storage/islington/",
+                "color": "#22c55e",
+                "location": "Islington"
             },
             "safestore": {
-                "25": 33,
-                "50": 55,
-                "75": 74,
-                "100": 94,
-                "150": 135
+                "name": "Safestore",
+                "shortName": "Safestore",
+                "isYou": false,
+                "url": "https://www.safestore.co.uk/self-storage/london/north/kings-cross/",
+                "color": "#f59e0b",
+                "location": "Kings Cross"
             },
             "bigyellow": {
-                "25": 36,
-                "50": 60,
-                "75": 80,
-                "100": 102,
-                "150": 145
+                "name": "Big Yellow",
+                "shortName": "Big Yellow",
+                "isYou": false,
+                "url": "https://www.bigyellow.co.uk/kings-cross-self-storage-units",
+                "color": "#ef4444",
+                "location": "Kings Cross"
             }
-        }
-    },
-    {
-        "date": "2026-01-13",
-        "prices": {
-            "metro": {
-                "25": 28,
-                "50": 48,
-                "75": 65,
-                "100": 82,
-                "150": 115
-            },
-            "access": {
-                "25": 30,
-                "50": 52,
-                "75": 70,
-                "100": 89,
-                "150": 126
-            },
-            "urban": {
-                "25": 29,
-                "50": 50,
-                "75": 67,
-                "100": 85,
-                "150": 120
-            },
-            "safestore": {
-                "25": 33,
-                "50": 55,
-                "75": 74,
-                "100": 94,
-                "150": 135
-            },
-            "bigyellow": {
-                "25": 36,
-                "50": 60,
-                "75": 80,
-                "100": 102,
-                "150": 145
-            }
-        }
-    },
-    {
-        "date": "2026-01-20",
-        "prices": {
-            "metro": {
-                "25": 28,
-                "50": 48,
-                "75": 65,
-                "100": 82,
-                "150": 115
-            },
-            "access": {
-                "25": 31,
-                "50": 53,
-                "75": 70,
-                "100": 90,
-                "150": 127
-            },
-            "urban": {
-                "25": 29,
-                "50": 50,
-                "75": 67,
-                "100": 85,
-                "150": 120
-            },
-            "safestore": {
-                "25": 34,
-                "50": 56,
-                "75": 75,
-                "100": 95,
-                "150": 136
-            },
-            "bigyellow": {
-                "25": 36,
-                "50": 60,
-                "75": 80,
-                "100": 102,
-                "150": 145
-            }
-        }
-    },
-    {
-        "date": "2026-01-27",
-        "prices": {
-            "metro": {
-                "25": 28,
-                "50": 48,
-                "75": 65,
-                "100": 82,
-                "150": 115
-            },
-            "access": {
-                "25": 31,
-                "50": 53,
-                "75": 71,
-                "100": 90,
-                "150": 128
-            },
-            "urban": {
-                "25": 30,
-                "50": 51,
-                "75": 68,
-                "100": 86,
-                "150": 122
-            },
-            "safestore": {
-                "25": 34,
-                "50": 56,
-                "75": 76,
-                "100": 95,
-                "150": 137
-            },
-            "bigyellow": {
-                "25": 37,
-                "50": 61,
-                "75": 81,
-                "100": 103,
-                "150": 146
-            }
-        }
-    },
-    {
-        "date": "2026-02-03",
-        "prices": {
-            "metro": {
-                "25": 28,
-                "50": 48,
-                "75": 65,
-                "100": 82,
-                "150": 115
-            },
-            "access": {
-                "25": 32,
-                "50": 54,
-                "75": 71,
-                "100": 91,
-                "150": 128
-            },
-            "urban": {
-                "25": 30,
-                "50": 51,
-                "75": 68,
-                "100": 87,
-                "150": 123
-            },
-            "safestore": {
-                "25": 34,
-                "50": 57,
-                "75": 76,
-                "100": 96,
-                "150": 138
-            },
-            "bigyellow": {
-                "25": 37,
-                "50": 61,
-                "75": 81,
-                "100": 104,
-                "150": 146
-            }
-        }
-    },
-    {
-        "date": "2026-02-10",
-        "prices": {
-            "metro": {
-                "25": 28,
-                "50": 48,
-                "75": 65,
-                "100": 82,
-                "150": 115
-            },
-            "access": {
-                "25": 32,
-                "50": 54,
-                "75": 72,
-                "100": 91,
-                "150": 129
-            },
-            "urban": {
-                "25": 30,
-                "50": 52,
-                "75": 69,
-                "100": 88,
-                "150": 125
-            },
-            "safestore": {
-                "25": 35,
-                "50": 57,
-                "75": 77,
-                "100": 97,
-                "150": 139
-            },
-            "bigyellow": {
-                "25": 38,
-                "50": 62,
-                "75": 82,
-                "100": 105,
-                "150": 148
-            }
-        }
-    },
-    {
-        "date": "2026-02-17",
-        "prices": {
-            "metro": {
-                "25": 28,
-                "50": 48,
-                "75": 65,
-                "100": 82,
-                "150": 115
-            },
-            "access": {
-                "25": 32,
-                "50": 54,
-                "75": 72,
-                "100": 91,
-                "150": 129
-            },
-            "urban": {
-                "25": 30,
-                "50": 52,
-                "75": 69,
-                "100": 88,
-                "150": 125
-            },
-            "safestore": {
-                "25": 35,
-                "50": 57,
-                "75": 77,
-                "100": 97,
-                "150": 139
-            },
-            "bigyellow": {
-                "25": 38,
-                "50": 62,
-                "75": 82,
-                "100": 105,
-                "150": 148
-            }
-        }
-    },
-    {
-        "date": "2026-02-24",
-        "prices": {
-            "metro": {
-                "25": 28,
-                "50": 48,
-                "75": 65,
-                "100": 82,
-                "150": 115
-            },
-            "access": {
-                "25": 32.5,
-                "50": 55,
-                "75": 72,
-                "100": 92,
-                "150": 130
-            },
-            "urban": {
-                "25": 30,
-                "50": 52,
-                "75": 69,
-                "100": 88,
-                "150": 125
-            },
-            "safestore": {
-                "25": 35,
-                "50": 58,
-                "75": 78,
-                "100": 98,
-                "150": 140
-            },
-            "bigyellow": {
-                "25": 38,
-                "50": 62,
-                "75": 82,
-                "100": 105,
-                "150": 148
-            }
-        }
-    },
-    {
-        "date": "2026-03-03",
-        "prices": {
-            "metro": {
-                "25": 28,
-                "50": 48,
-                "75": 65,
-                "100": 82,
-                "150": 115
-            },
-            "access": {
-                "25": 32.5,
-                "50": 55,
-                "75": 72,
-                "100": 92,
-                "150": 130
-            },
-            "urban": {
-                "25": 30,
-                "50": 52,
-                "75": 69,
-                "100": 88,
-                "150": 125
-            },
-            "safestore": {
-                "25": 35,
-                "50": 58,
-                "75": 78,
-                "100": 98,
-                "150": 140
-            },
-            "bigyellow": {
-                "25": 38,
-                "50": 62,
-                "75": 82,
-                "100": 105,
-                "150": 148
-            }
-        }
-    },
-    {
-        "date": "2026-03-10",
-        "prices": {
-            "metro": {
-                "25": 28,
-                "50": 48,
-                "75": 65,
-                "100": 82,
-                "150": 115
-            },
-            "access": {
-                "25": 32.5,
-                "50": 55,
-                "75": 72,
-                "100": 92,
-                "150": 130
-            },
-            "urban": {
-                "25": 30,
-                "50": 52,
-                "75": 69,
-                "100": 88,
-                "150": 125
-            },
-            "safestore": {
-                "25": 35,
-                "50": 58,
-                "75": 78,
-                "100": 98,
-                "150": 140
-            },
-            "bigyellow": {
-                "25": 38,
-                "50": 62,
-                "75": 82,
-                "100": 105,
-                "150": 148
-            }
-        }
-    },
-    {
-        "date": "2026-03-14",
-        "prices": {
-            "metro": {
-                "25": 46.75,
-                "50": 78.5,
-                "75": 101.25,
-                "100": 123.75,
-                "150": 188.75
-            },
-            "access": {
-                "25": 45.46,
-                "50": 66.23,
-                "75": 112.38,
-                "100": 132.92,
-                "150": 223.85
-            },
-            "urban": {
-                "25": 45.19,
-                "50": 61.73,
-                "75": 76.6,
-                "100": 97.72,
-                "150": 210.67
-            },
-            "safestore": {
-                "25": 51.49,
-                "50": 91.99,
-                "75": 125.49,
-                "100": 120.49,
-                "150": 258.99
-            },
-            "bigyellow": {
-                "25": 37.8,
-                "50": 59.4,
-                "75": 80.7,
-                "100": 101.7,
-                "150": 190.5
-            }
-        }
-    },
-    {
-        "date": "2026-06-22",
-        "prices": {
+        },
+        "currentPrices": {
             "metro": {
                 "25": 46.75,
                 "50": 78.5,
@@ -761,343 +91,1766 @@ const PRICE_HISTORY = [
                 "100": 104.4,
                 "150": 162.9
             }
+        },
+        "currentDeals": {
+            "metro": {
+                "active": true,
+                "text": "50% off your first 8 weeks",
+                "discountPct": 50,
+                "maxWeeks": 8,
+                "firstSeen": "2026-03-14",
+                "lastSeen": "2026-06-22"
+            },
+            "access": {
+                "active": true,
+                "text": "50% off up to 13 weeks storage",
+                "discountPct": 50,
+                "maxWeeks": 13,
+                "firstSeen": "2026-01-15",
+                "lastSeen": "2026-06-22"
+            },
+            "urban": {
+                "active": true,
+                "text": "50% off your first two months",
+                "discountPct": 50,
+                "maxWeeks": 0,
+                "firstSeen": "2026-03-14",
+                "lastSeen": "2026-06-22"
+            },
+            "safestore": {
+                "active": true,
+                "text": "50% off storage for 8 weeks",
+                "discountPct": 50,
+                "maxWeeks": 8,
+                "firstSeen": "2026-06-22",
+                "lastSeen": "2026-06-22"
+            },
+            "bigyellow": {
+                "active": true,
+                "text": "50% off for up to 8 weeks",
+                "discountPct": 50,
+                "maxWeeks": 8,
+                "firstSeen": "2026-06-22",
+                "lastSeen": "2026-06-22"
+            }
+        },
+        "priceHistory": [
+            {
+                "date": "2026-01-06",
+                "prices": {
+                    "metro": {
+                        "25": 28,
+                        "50": 48,
+                        "75": 65,
+                        "100": 82,
+                        "150": 115
+                    },
+                    "access": {
+                        "25": 30,
+                        "50": 52,
+                        "75": 70,
+                        "100": 89,
+                        "150": 126
+                    },
+                    "urban": {
+                        "25": 29,
+                        "50": 50,
+                        "75": 67,
+                        "100": 85,
+                        "150": 120
+                    },
+                    "safestore": {
+                        "25": 33,
+                        "50": 55,
+                        "75": 74,
+                        "100": 94,
+                        "150": 135
+                    },
+                    "bigyellow": {
+                        "25": 36,
+                        "50": 60,
+                        "75": 80,
+                        "100": 102,
+                        "150": 145
+                    }
+                }
+            },
+            {
+                "date": "2026-01-13",
+                "prices": {
+                    "metro": {
+                        "25": 28,
+                        "50": 48,
+                        "75": 65,
+                        "100": 82,
+                        "150": 115
+                    },
+                    "access": {
+                        "25": 30,
+                        "50": 52,
+                        "75": 70,
+                        "100": 89,
+                        "150": 126
+                    },
+                    "urban": {
+                        "25": 29,
+                        "50": 50,
+                        "75": 67,
+                        "100": 85,
+                        "150": 120
+                    },
+                    "safestore": {
+                        "25": 33,
+                        "50": 55,
+                        "75": 74,
+                        "100": 94,
+                        "150": 135
+                    },
+                    "bigyellow": {
+                        "25": 36,
+                        "50": 60,
+                        "75": 80,
+                        "100": 102,
+                        "150": 145
+                    }
+                }
+            },
+            {
+                "date": "2026-01-20",
+                "prices": {
+                    "metro": {
+                        "25": 28,
+                        "50": 48,
+                        "75": 65,
+                        "100": 82,
+                        "150": 115
+                    },
+                    "access": {
+                        "25": 31,
+                        "50": 53,
+                        "75": 70,
+                        "100": 90,
+                        "150": 127
+                    },
+                    "urban": {
+                        "25": 29,
+                        "50": 50,
+                        "75": 67,
+                        "100": 85,
+                        "150": 120
+                    },
+                    "safestore": {
+                        "25": 34,
+                        "50": 56,
+                        "75": 75,
+                        "100": 95,
+                        "150": 136
+                    },
+                    "bigyellow": {
+                        "25": 36,
+                        "50": 60,
+                        "75": 80,
+                        "100": 102,
+                        "150": 145
+                    }
+                }
+            },
+            {
+                "date": "2026-01-27",
+                "prices": {
+                    "metro": {
+                        "25": 28,
+                        "50": 48,
+                        "75": 65,
+                        "100": 82,
+                        "150": 115
+                    },
+                    "access": {
+                        "25": 31,
+                        "50": 53,
+                        "75": 71,
+                        "100": 90,
+                        "150": 128
+                    },
+                    "urban": {
+                        "25": 30,
+                        "50": 51,
+                        "75": 68,
+                        "100": 86,
+                        "150": 122
+                    },
+                    "safestore": {
+                        "25": 34,
+                        "50": 56,
+                        "75": 76,
+                        "100": 95,
+                        "150": 137
+                    },
+                    "bigyellow": {
+                        "25": 37,
+                        "50": 61,
+                        "75": 81,
+                        "100": 103,
+                        "150": 146
+                    }
+                }
+            },
+            {
+                "date": "2026-02-03",
+                "prices": {
+                    "metro": {
+                        "25": 28,
+                        "50": 48,
+                        "75": 65,
+                        "100": 82,
+                        "150": 115
+                    },
+                    "access": {
+                        "25": 32,
+                        "50": 54,
+                        "75": 71,
+                        "100": 91,
+                        "150": 128
+                    },
+                    "urban": {
+                        "25": 30,
+                        "50": 51,
+                        "75": 68,
+                        "100": 87,
+                        "150": 123
+                    },
+                    "safestore": {
+                        "25": 34,
+                        "50": 57,
+                        "75": 76,
+                        "100": 96,
+                        "150": 138
+                    },
+                    "bigyellow": {
+                        "25": 37,
+                        "50": 61,
+                        "75": 81,
+                        "100": 104,
+                        "150": 146
+                    }
+                }
+            },
+            {
+                "date": "2026-02-10",
+                "prices": {
+                    "metro": {
+                        "25": 28,
+                        "50": 48,
+                        "75": 65,
+                        "100": 82,
+                        "150": 115
+                    },
+                    "access": {
+                        "25": 32,
+                        "50": 54,
+                        "75": 72,
+                        "100": 91,
+                        "150": 129
+                    },
+                    "urban": {
+                        "25": 30,
+                        "50": 52,
+                        "75": 69,
+                        "100": 88,
+                        "150": 125
+                    },
+                    "safestore": {
+                        "25": 35,
+                        "50": 57,
+                        "75": 77,
+                        "100": 97,
+                        "150": 139
+                    },
+                    "bigyellow": {
+                        "25": 38,
+                        "50": 62,
+                        "75": 82,
+                        "100": 105,
+                        "150": 148
+                    }
+                }
+            },
+            {
+                "date": "2026-02-17",
+                "prices": {
+                    "metro": {
+                        "25": 28,
+                        "50": 48,
+                        "75": 65,
+                        "100": 82,
+                        "150": 115
+                    },
+                    "access": {
+                        "25": 32,
+                        "50": 54,
+                        "75": 72,
+                        "100": 91,
+                        "150": 129
+                    },
+                    "urban": {
+                        "25": 30,
+                        "50": 52,
+                        "75": 69,
+                        "100": 88,
+                        "150": 125
+                    },
+                    "safestore": {
+                        "25": 35,
+                        "50": 57,
+                        "75": 77,
+                        "100": 97,
+                        "150": 139
+                    },
+                    "bigyellow": {
+                        "25": 38,
+                        "50": 62,
+                        "75": 82,
+                        "100": 105,
+                        "150": 148
+                    }
+                }
+            },
+            {
+                "date": "2026-02-24",
+                "prices": {
+                    "metro": {
+                        "25": 28,
+                        "50": 48,
+                        "75": 65,
+                        "100": 82,
+                        "150": 115
+                    },
+                    "access": {
+                        "25": 32.5,
+                        "50": 55,
+                        "75": 72,
+                        "100": 92,
+                        "150": 130
+                    },
+                    "urban": {
+                        "25": 30,
+                        "50": 52,
+                        "75": 69,
+                        "100": 88,
+                        "150": 125
+                    },
+                    "safestore": {
+                        "25": 35,
+                        "50": 58,
+                        "75": 78,
+                        "100": 98,
+                        "150": 140
+                    },
+                    "bigyellow": {
+                        "25": 38,
+                        "50": 62,
+                        "75": 82,
+                        "100": 105,
+                        "150": 148
+                    }
+                }
+            },
+            {
+                "date": "2026-03-03",
+                "prices": {
+                    "metro": {
+                        "25": 28,
+                        "50": 48,
+                        "75": 65,
+                        "100": 82,
+                        "150": 115
+                    },
+                    "access": {
+                        "25": 32.5,
+                        "50": 55,
+                        "75": 72,
+                        "100": 92,
+                        "150": 130
+                    },
+                    "urban": {
+                        "25": 30,
+                        "50": 52,
+                        "75": 69,
+                        "100": 88,
+                        "150": 125
+                    },
+                    "safestore": {
+                        "25": 35,
+                        "50": 58,
+                        "75": 78,
+                        "100": 98,
+                        "150": 140
+                    },
+                    "bigyellow": {
+                        "25": 38,
+                        "50": 62,
+                        "75": 82,
+                        "100": 105,
+                        "150": 148
+                    }
+                }
+            },
+            {
+                "date": "2026-03-10",
+                "prices": {
+                    "metro": {
+                        "25": 28,
+                        "50": 48,
+                        "75": 65,
+                        "100": 82,
+                        "150": 115
+                    },
+                    "access": {
+                        "25": 32.5,
+                        "50": 55,
+                        "75": 72,
+                        "100": 92,
+                        "150": 130
+                    },
+                    "urban": {
+                        "25": 30,
+                        "50": 52,
+                        "75": 69,
+                        "100": 88,
+                        "150": 125
+                    },
+                    "safestore": {
+                        "25": 35,
+                        "50": 58,
+                        "75": 78,
+                        "100": 98,
+                        "150": 140
+                    },
+                    "bigyellow": {
+                        "25": 38,
+                        "50": 62,
+                        "75": 82,
+                        "100": 105,
+                        "150": 148
+                    }
+                }
+            },
+            {
+                "date": "2026-03-14",
+                "prices": {
+                    "metro": {
+                        "25": 46.75,
+                        "50": 78.5,
+                        "75": 101.25,
+                        "100": 123.75,
+                        "150": 188.75
+                    },
+                    "access": {
+                        "25": 45.46,
+                        "50": 66.23,
+                        "75": 112.38,
+                        "100": 132.92,
+                        "150": 223.85
+                    },
+                    "urban": {
+                        "25": 45.19,
+                        "50": 61.73,
+                        "75": 76.6,
+                        "100": 97.72,
+                        "150": 210.67
+                    },
+                    "safestore": {
+                        "25": 51.49,
+                        "50": 91.99,
+                        "75": 125.49,
+                        "100": 120.49,
+                        "150": 258.99
+                    },
+                    "bigyellow": {
+                        "25": 37.8,
+                        "50": 59.4,
+                        "75": 80.7,
+                        "100": 101.7,
+                        "150": 190.5
+                    }
+                }
+            },
+            {
+                "date": "2026-06-22",
+                "prices": {
+                    "metro": {
+                        "25": 46.75,
+                        "50": 78.5,
+                        "75": 101.25,
+                        "100": 123.75,
+                        "150": 188.75
+                    },
+                    "access": {
+                        "25": 45.69,
+                        "50": 66.23,
+                        "75": 108.92,
+                        "100": 137.77,
+                        "150": 223.85
+                    },
+                    "urban": {
+                        "10": 28.59,
+                        "25": 57.93,
+                        "35": 71.16,
+                        "50": 74.95,
+                        "75": 100.17,
+                        "100": 135.31,
+                        "125": 170.45,
+                        "150": 210.67
+                    },
+                    "safestore": {
+                        "25": 51.49,
+                        "50": 91.99,
+                        "75": 125.49,
+                        "100": 120.49,
+                        "150": 258.99
+                    },
+                    "bigyellow": {
+                        "25": 55.2,
+                        "50": 65.1,
+                        "75": 94.5,
+                        "100": 104.4,
+                        "150": 162.9
+                    }
+                }
+            }
+        ],
+        "priceChanges": [
+            {
+                "date": "2026-01-20",
+                "provider": "access",
+                "size": 25,
+                "oldPrice": 30,
+                "newPrice": 31
+            },
+            {
+                "date": "2026-01-20",
+                "provider": "access",
+                "size": 50,
+                "oldPrice": 52,
+                "newPrice": 53
+            },
+            {
+                "date": "2026-01-20",
+                "provider": "safestore",
+                "size": 25,
+                "oldPrice": 33,
+                "newPrice": 34
+            },
+            {
+                "date": "2026-01-20",
+                "provider": "safestore",
+                "size": 50,
+                "oldPrice": 55,
+                "newPrice": 56
+            },
+            {
+                "date": "2026-01-27",
+                "provider": "urban",
+                "size": 25,
+                "oldPrice": 29,
+                "newPrice": 30
+            },
+            {
+                "date": "2026-01-27",
+                "provider": "urban",
+                "size": 50,
+                "oldPrice": 50,
+                "newPrice": 51
+            },
+            {
+                "date": "2026-01-27",
+                "provider": "bigyellow",
+                "size": 50,
+                "oldPrice": 60,
+                "newPrice": 61
+            },
+            {
+                "date": "2026-02-03",
+                "provider": "access",
+                "size": 50,
+                "oldPrice": 53,
+                "newPrice": 54
+            },
+            {
+                "date": "2026-02-10",
+                "provider": "urban",
+                "size": 50,
+                "oldPrice": 51,
+                "newPrice": 52
+            },
+            {
+                "date": "2026-02-10",
+                "provider": "safestore",
+                "size": 25,
+                "oldPrice": 34,
+                "newPrice": 35
+            },
+            {
+                "date": "2026-02-10",
+                "provider": "bigyellow",
+                "size": 25,
+                "oldPrice": 37,
+                "newPrice": 38
+            },
+            {
+                "date": "2026-02-10",
+                "provider": "bigyellow",
+                "size": 50,
+                "oldPrice": 61,
+                "newPrice": 62
+            },
+            {
+                "date": "2026-02-24",
+                "provider": "access",
+                "size": 25,
+                "oldPrice": 32,
+                "newPrice": 32.5
+            },
+            {
+                "date": "2026-02-24",
+                "provider": "access",
+                "size": 50,
+                "oldPrice": 54,
+                "newPrice": 55
+            },
+            {
+                "date": "2026-02-24",
+                "provider": "safestore",
+                "size": 50,
+                "oldPrice": 57,
+                "newPrice": 58
+            },
+            {
+                "date": "2026-06-22",
+                "provider": "access",
+                "size": 25,
+                "oldPrice": 45.46,
+                "newPrice": 45.69
+            },
+            {
+                "date": "2026-06-22",
+                "provider": "access",
+                "size": 75,
+                "oldPrice": 112.38,
+                "newPrice": 108.92
+            },
+            {
+                "date": "2026-06-22",
+                "provider": "access",
+                "size": 100,
+                "oldPrice": 132.92,
+                "newPrice": 137.77
+            },
+            {
+                "date": "2026-06-22",
+                "provider": "urban",
+                "size": 25,
+                "oldPrice": 45.19,
+                "newPrice": 57.93
+            },
+            {
+                "date": "2026-06-22",
+                "provider": "urban",
+                "size": 50,
+                "oldPrice": 61.73,
+                "newPrice": 74.95
+            },
+            {
+                "date": "2026-06-22",
+                "provider": "urban",
+                "size": 75,
+                "oldPrice": 76.6,
+                "newPrice": 100.17
+            },
+            {
+                "date": "2026-06-22",
+                "provider": "urban",
+                "size": 100,
+                "oldPrice": 97.72,
+                "newPrice": 135.31
+            },
+            {
+                "date": "2026-06-22",
+                "provider": "bigyellow",
+                "size": 25,
+                "oldPrice": 37.8,
+                "newPrice": 55.2
+            },
+            {
+                "date": "2026-06-22",
+                "provider": "bigyellow",
+                "size": 50,
+                "oldPrice": 59.4,
+                "newPrice": 65.1
+            },
+            {
+                "date": "2026-06-22",
+                "provider": "bigyellow",
+                "size": 75,
+                "oldPrice": 80.7,
+                "newPrice": 94.5
+            },
+            {
+                "date": "2026-06-22",
+                "provider": "bigyellow",
+                "size": 100,
+                "oldPrice": 101.7,
+                "newPrice": 104.4
+            },
+            {
+                "date": "2026-06-22",
+                "provider": "bigyellow",
+                "size": 150,
+                "oldPrice": 190.5,
+                "newPrice": 162.9
+            }
+        ],
+        "dealsHistory": [
+            {
+                "provider": "metro",
+                "text": "50% off for up to 12 weeks",
+                "firstSeen": "2026-02-01",
+                "lastSeen": "2026-03-14",
+                "active": false
+            },
+            {
+                "provider": "access",
+                "text": "50% off up to 13 weeks storage",
+                "firstSeen": "2026-01-15",
+                "lastSeen": "2026-06-22",
+                "active": true
+            },
+            {
+                "provider": "urban",
+                "text": "50% off your first 2 months + Price Match Guarantee",
+                "firstSeen": "2026-02-10",
+                "lastSeen": "2026-03-14",
+                "active": true
+            },
+            {
+                "provider": "safestore",
+                "text": "First 8 weeks free on selected units",
+                "firstSeen": "2025-11-15",
+                "lastSeen": "2026-01-10",
+                "active": false
+            },
+            {
+                "provider": "safestore",
+                "text": "50% off for first 8 weeks",
+                "firstSeen": "2026-03-01",
+                "lastSeen": "2026-03-14",
+                "active": false
+            },
+            {
+                "provider": "bigyellow",
+                "text": "25% off first 3 months",
+                "firstSeen": "2025-12-01",
+                "lastSeen": "2026-01-31",
+                "active": false
+            },
+            {
+                "provider": "metro",
+                "text": "50% off your first 8 weeks\n\nAddress:\n27 Maryland Walk, Islington, London N1 8QZ\n\nExact location using What 3 Words:\nladder.",
+                "firstSeen": "2026-03-14",
+                "lastSeen": "2026-03-14",
+                "active": false
+            },
+            {
+                "provider": "access",
+                "text": "50% off up to 13 weeks storage\n\nat Access Self Storage Islington\n\n4.",
+                "firstSeen": "2026-03-14",
+                "lastSeen": "2026-03-14",
+                "active": true
+            },
+            {
+                "provider": "urban",
+                "text": "50% off your first two months!",
+                "firstSeen": "2026-03-14",
+                "lastSeen": "2026-03-14",
+                "active": true
+            },
+            {
+                "provider": "safestore",
+                "text": "Lowest Price Guarantee*",
+                "firstSeen": "2026-03-14",
+                "lastSeen": "2026-03-14",
+                "active": false
+            },
+            {
+                "provider": "urban",
+                "text": "50% off your first two months",
+                "firstSeen": "2026-03-14",
+                "lastSeen": "2026-06-22",
+                "active": true
+            },
+            {
+                "provider": "metro",
+                "text": "50% off your first 8 weeks",
+                "firstSeen": "2026-03-14",
+                "lastSeen": "2026-06-22",
+                "active": true
+            },
+            {
+                "provider": "safestore",
+                "text": "50% off storage for 8 weeks",
+                "firstSeen": "2026-06-22",
+                "lastSeen": "2026-06-22",
+                "active": true
+            },
+            {
+                "provider": "bigyellow",
+                "text": "50% off for up to 8 weeks",
+                "firstSeen": "2026-06-22",
+                "lastSeen": "2026-06-22",
+                "active": true
+            }
+        ],
+        "scrapeStatus": {
+            "metro": {
+                "status": "ok",
+                "lastSuccess": "2026-03-14",
+                "pricesFound": 5,
+                "message": "Internal price sheet"
+            },
+            "access": {
+                "status": "ok",
+                "lastSuccess": "2026-06-22",
+                "pricesFound": 5,
+                "message": "Sources: quote-form:3 (5/5 sizes)"
+            },
+            "urban": {
+                "status": "ok",
+                "lastSuccess": "2026-06-22",
+                "pricesFound": 8,
+                "message": "Sources: quote-form:8 (8/5 sizes)"
+            },
+            "safestore": {
+                "status": "partial",
+                "lastSuccess": "2026-03-14",
+                "pricesFound": 5,
+                "message": "Using cached prices - no new data today"
+            },
+            "bigyellow": {
+                "status": "partial",
+                "lastSuccess": "2026-03-14",
+                "pricesFound": 5,
+                "message": "Using cached prices - no new data today"
+            }
+        },
+        "insurance": {
+            "metro": {
+                "brand": "StoreReady Contents Protection",
+                "mandatory": true,
+                "model": "included",
+                "published": "full",
+                "entryWeekly": 0,
+                "tiers": [],
+                "note": "Cover INCLUDED FREE in the rent, scaling with unit size: 25→£2k, 50→£4k, 75→£5k, 100→£8k, 150→£10k. Excess above the included level charged at £4 per £1,000 / 4 weeks.",
+                "confidence": "high",
+                "source": "https://www.metro-storage.co.uk/knowledge-centre/i-insure-goods/",
+                "lastResearched": "2026-06-28",
+                "coverBySize": {
+                    "25": 2000,
+                    "50": 4000,
+                    "75": 5000,
+                    "100": 8000,
+                    "150": 10000
+                }
+            },
+            "access": {
+                "brand": "Contents Protection",
+                "mandatory": true,
+                "model": "rate",
+                "published": "partial",
+                "entryWeekly": 1.72,
+                "ratePer1000": 1.86,
+                "ratePeriod": "month",
+                "minCoverGBP": 4000,
+                "tiers": [
+                    {
+                        "coverGBP": 4000,
+                        "costGBP": 7.44,
+                        "period": "month",
+                        "derived": true
+                    }
+                ],
+                "note": "Priced 'from £1.86 per £1,000 of cover / calendar month', minimum £4,000 cover. No public ladder — entry tier derived from the published rate. Weekly figure approximate (×12/52).",
+                "confidence": "medium",
+                "source": "https://www.accessstorage.com/self-storage-insurance",
+                "lastResearched": "2026-06-28"
+            },
+            "urban": {
+                "brand": "StoreProtect",
+                "mandatory": true,
+                "model": "quote-only",
+                "published": "none",
+                "entryWeekly": null,
+                "tiers": [],
+                "note": "Goods protection mandatory (own policy or their StoreProtect). No cover tiers or prices published anywhere — disclosed only on a personalised quote.",
+                "confidence": "low",
+                "source": "https://www.urbanlocker.co.uk/faqs/",
+                "lastResearched": "2026-06-28"
+            },
+            "safestore": {
+                "brand": "StoreProtect",
+                "mandatory": true,
+                "model": "quote-only",
+                "published": "none",
+                "entryWeekly": null,
+                "tiers": [],
+                "note": "Mandatory (own insurance or StoreProtect enhanced-liability). Value-tiered but no ladder published — quoted in store. Separate £50 claims-admin fee is deducted from any claim settlement.",
+                "confidence": "low",
+                "source": "https://www.safestore.co.uk/storeprotect/",
+                "lastResearched": "2026-06-28"
+            },
+            "bigyellow": {
+                "brand": "Enhanced Liability Service",
+                "mandatory": true,
+                "model": "tiered",
+                "published": "partial",
+                "entryWeekly": 6.25,
+                "tiers": [
+                    {
+                        "coverGBP": 4000,
+                        "costGBP": 6.25,
+                        "period": "week"
+                    },
+                    {
+                        "coverGBP": 6000,
+                        "costGBP": 8,
+                        "period": "week"
+                    }
+                ],
+                "note": "Mandatory (own policy or their Enhanced Liability Service). From £6.25/wk for £4,000 cover; £8.00/wk for £6,000 (stated average). Higher tiers quote-only.",
+                "confidence": "medium",
+                "source": "https://www.bigyellow.co.uk/faqs/insurance-contents-protection/",
+                "lastResearched": "2026-06-28"
+            }
+        },
+        "adminFees": {
+            "metro": {
+                "items": [
+                    {
+                        "type": "admin",
+                        "label": "Admin / sign-up fee",
+                        "amountGBP": 0,
+                        "oneOff": true
+                    },
+                    {
+                        "type": "padlock",
+                        "label": "Padlock",
+                        "amountGBP": 0,
+                        "oneOff": true,
+                        "note": "Free use included"
+                    }
+                ],
+                "totalUpfront": 0,
+                "note": "All-inclusive: no admin/sign-up fee, free padlock.",
+                "confidence": "high",
+                "source": "https://www.metro-storage.co.uk/prices/",
+                "lastResearched": "2026-06-28"
+            },
+            "access": {
+                "items": [
+                    {
+                        "type": "admin",
+                        "label": "Admin fee",
+                        "amountGBP": 0,
+                        "oneOff": true
+                    },
+                    {
+                        "type": "deposit",
+                        "label": "Deposit",
+                        "amountGBP": 0,
+                        "oneOff": true
+                    },
+                    {
+                        "type": "padlock",
+                        "label": "Padlock (in-store)",
+                        "amountGBP": 14,
+                        "oneOff": true
+                    }
+                ],
+                "totalUpfront": 14,
+                "note": "No admin fee or deposit; padlock £14 in store if you need one.",
+                "confidence": "medium",
+                "source": "https://www.accessstorage.com/faqs",
+                "lastResearched": "2026-06-28"
+            },
+            "urban": {
+                "items": [
+                    {
+                        "type": "padlock",
+                        "label": "Padlock",
+                        "amountGBP": 0,
+                        "oneOff": true,
+                        "note": "App access at Islington — no padlock needed"
+                    }
+                ],
+                "totalUpfront": null,
+                "note": "No fees published. Smartphone-app access (no padlock required). Admin/deposit not disclosed.",
+                "confidence": "low",
+                "source": "https://www.urbanlocker.co.uk/faqs/",
+                "lastResearched": "2026-06-28"
+            },
+            "safestore": {
+                "items": [
+                    {
+                        "type": "deposit",
+                        "label": "Security deposit",
+                        "amountGBP": null,
+                        "oneOff": true,
+                        "note": "Required on move-in; amount not published"
+                    },
+                    {
+                        "type": "padlock",
+                        "label": "Padlock (in-store)",
+                        "amountGBP": null,
+                        "oneOff": true
+                    },
+                    {
+                        "type": "admin",
+                        "label": "Claims admin fee",
+                        "amountGBP": 50,
+                        "oneOff": false,
+                        "note": "Deducted from any claim — not an upfront fee"
+                    }
+                ],
+                "totalUpfront": null,
+                "note": "Deposit + padlock required on move-in but amounts not published (quote/in-store). £50 claims-admin applies only on a claim.",
+                "confidence": "low",
+                "source": "https://www.safestore.co.uk/faqs/",
+                "lastResearched": "2026-06-28"
+            },
+            "bigyellow": {
+                "items": [
+                    {
+                        "type": "admin",
+                        "label": "Set-up fee",
+                        "amountGBP": 0,
+                        "oneOff": true
+                    },
+                    {
+                        "type": "deposit",
+                        "label": "Security deposit (refundable)",
+                        "amountGBP": null,
+                        "oneOff": true,
+                        "note": "= one week's rent; refunded on vacate"
+                    },
+                    {
+                        "type": "padlock",
+                        "label": "Padlock (in-store)",
+                        "amountGBP": null,
+                        "oneOff": true
+                    }
+                ],
+                "totalUpfront": 0,
+                "note": "No set-up fee. Refundable deposit = one week's rent. Padlock sold in store (price not published).",
+                "confidence": "medium",
+                "source": "https://www.bigyellow.co.uk/faqs/payment/",
+                "lastResearched": "2026-06-28"
+            }
         }
-    }
-];
-
-// Price change log
-const PRICE_CHANGES = [
-    {
-        "date": "2026-01-20",
-        "provider": "access",
-        "size": 25,
-        "oldPrice": 30,
-        "newPrice": 31
     },
-    {
-        "date": "2026-01-20",
-        "provider": "access",
-        "size": 50,
-        "oldPrice": 52,
-        "newPrice": 53
+    "bayswater": {
+        "label": "Bayswater",
+        "locationBadge": "Bayswater, W2",
+        "yourStore": "Metro Storage Bayswater",
+        "providers": {
+            "metro": {
+                "name": "Metro Storage",
+                "shortName": "Metro",
+                "isYou": true,
+                "url": "https://www.metro-storage.co.uk/",
+                "color": "#6366f1",
+                "location": "Bayswater, W2"
+            },
+            "storageking": {
+                "name": "Storage King Bayswater",
+                "shortName": "Storage King",
+                "isYou": false,
+                "url": "https://www.storageking.co.uk/stores/bayswater/",
+                "color": "#ec4899",
+                "location": "Queensway, W2 5HW"
+            },
+            "shurgard": {
+                "name": "Shurgard Kensington",
+                "shortName": "Shurgard",
+                "isYou": false,
+                "url": "https://www.shurgard.com/en-gb/self-storage-uk/london/kensington",
+                "color": "#a855f7",
+                "location": "Freston Rd, W10 6TH"
+            },
+            "safestore": {
+                "name": "Safestore St John's Wood",
+                "shortName": "Safestore",
+                "isYou": false,
+                "url": "https://www.safestore.co.uk/self-storage/london/north/st-johns-wood/",
+                "color": "#f59e0b",
+                "location": "Hall Rd, NW8 9PA (serves Maida Vale)"
+            }
+        },
+        "currentPrices": {
+            "metro": {
+                "25": 58,
+                "50": 86,
+                "75": 119.5
+            },
+            "storageking": {},
+            "shurgard": {},
+            "safestore": {}
+        },
+        "currentDeals": {
+            "metro": {
+                "active": false,
+                "text": "No current deal recorded",
+                "discountPct": 0,
+                "maxWeeks": 0,
+                "firstSeen": "2026-06-28",
+                "lastSeen": "2026-06-28"
+            },
+            "storageking": {
+                "active": true,
+                "text": "50% off for up to 2 months (new customers)",
+                "discountPct": 50,
+                "maxWeeks": 8,
+                "firstSeen": "2026-06-28",
+                "lastSeen": "2026-06-28"
+            },
+            "shurgard": {
+                "active": true,
+                "text": "£1 first month's rent (selected units)",
+                "discountPct": 0,
+                "maxWeeks": 0,
+                "firstSeen": "2026-06-28",
+                "lastSeen": "2026-06-28"
+            },
+            "safestore": {
+                "active": true,
+                "text": "£1 first month, or 50% off up to 8 weeks",
+                "discountPct": 50,
+                "maxWeeks": 8,
+                "firstSeen": "2026-06-28",
+                "lastSeen": "2026-06-28"
+            }
+        },
+        "priceHistory": [],
+        "priceChanges": [],
+        "dealsHistory": [
+            {
+                "provider": "storageking",
+                "text": "50% off for up to 2 months (new customers)",
+                "firstSeen": "2026-06-28",
+                "lastSeen": "2026-06-28",
+                "active": true
+            },
+            {
+                "provider": "shurgard",
+                "text": "£1 first month's rent (selected units)",
+                "firstSeen": "2026-06-28",
+                "lastSeen": "2026-06-28",
+                "active": true
+            },
+            {
+                "provider": "safestore",
+                "text": "£1 first month, or 50% off up to 8 weeks",
+                "firstSeen": "2026-06-28",
+                "lastSeen": "2026-06-28",
+                "active": true
+            }
+        ],
+        "scrapeStatus": {
+            "metro": {
+                "status": "partial",
+                "lastSuccess": "2026-06-28",
+                "pricesFound": 3,
+                "message": "Internal price sheet (25/50/75; 100/150 TBD)"
+            },
+            "storageking": {
+                "status": "partial",
+                "lastSuccess": null,
+                "pricesFound": 0,
+                "message": "Researched 2026-06-28 — rent quote-only"
+            },
+            "shurgard": {
+                "status": "partial",
+                "lastSuccess": null,
+                "pricesFound": 0,
+                "message": "Researched 2026-06-28 — rent quote-only (dynamic online)"
+            },
+            "safestore": {
+                "status": "partial",
+                "lastSuccess": null,
+                "pricesFound": 0,
+                "message": "Researched 2026-06-28 — rent quote-only (gated form)"
+            }
+        },
+        "insurance": {
+            "metro": {
+                "brand": "StoreReady Contents Protection",
+                "mandatory": true,
+                "model": "included",
+                "published": "full",
+                "entryWeekly": 0,
+                "tiers": [],
+                "note": "Cover INCLUDED FREE in the rent, scaling with unit size: 25→£2k, 50→£4k, 75→£5k, 100→£8k, 150→£10k. Excess above the included level charged at £4 per £1,000 / 4 weeks.",
+                "confidence": "high",
+                "source": "https://www.metro-storage.co.uk/knowledge-centre/i-insure-goods/",
+                "lastResearched": "2026-06-28",
+                "coverBySize": {
+                    "25": 2000,
+                    "50": 4000,
+                    "75": 5000,
+                    "100": 8000,
+                    "150": 10000
+                }
+            },
+            "storageking": {
+                "brand": "In-house policy",
+                "mandatory": true,
+                "model": "rate",
+                "published": "none",
+                "entryWeekly": null,
+                "tiers": [],
+                "note": "Mandatory in-house cover (own external policy accepted). Priced per £1,000 of declared value; £100k total limit, £100 excess (£250 flood at W2). £-rate not published — quote-only.",
+                "confidence": "medium",
+                "source": "https://www.storageking.co.uk/important-information/summary-of-insurance/",
+                "lastResearched": "2026-06-28"
+            },
+            "shurgard": {
+                "brand": "SHURProtect",
+                "mandatory": true,
+                "model": "tiered",
+                "published": "full",
+                "entryWeekly": 4.62,
+                "tiers": [
+                    {
+                        "coverGBP": 2000,
+                        "costGBP": 20,
+                        "period": "month"
+                    },
+                    {
+                        "coverGBP": 4000,
+                        "costGBP": 26,
+                        "period": "month"
+                    },
+                    {
+                        "coverGBP": 7500,
+                        "costGBP": 36,
+                        "period": "month"
+                    },
+                    {
+                        "coverGBP": 10000,
+                        "costGBP": 48,
+                        "period": "month"
+                    },
+                    {
+                        "coverGBP": 15000,
+                        "costGBP": 60,
+                        "period": "month"
+                    }
+                ],
+                "note": "SHURProtect, billed monthly, tiered by goods value. Entry £20/mo (£2k cover); a £6/mo £500 tier exists for lockers only. Required unless you provide own cover; above £15k arrange externally. Weekly figure ×12/52.",
+                "confidence": "high",
+                "source": "https://www.shurgard.com/en-gb/self-storage/why-shurgard/goods-protection",
+                "lastResearched": "2026-06-28"
+            },
+            "safestore": {
+                "brand": "StoreProtect",
+                "mandatory": true,
+                "model": "quote-only",
+                "published": "none",
+                "entryWeekly": null,
+                "tiers": [],
+                "note": "Mandatory (own insurance or StoreProtect enhanced-liability). Value-tiered but no ladder published — quoted in store. Separate £50 claims-admin fee is deducted from any claim settlement.",
+                "confidence": "low",
+                "source": "https://www.safestore.co.uk/storeprotect/",
+                "lastResearched": "2026-06-28"
+            }
+        },
+        "adminFees": {
+            "metro": {
+                "items": [
+                    {
+                        "type": "admin",
+                        "label": "Admin / sign-up fee",
+                        "amountGBP": 0,
+                        "oneOff": true
+                    },
+                    {
+                        "type": "padlock",
+                        "label": "Padlock",
+                        "amountGBP": 0,
+                        "oneOff": true,
+                        "note": "Free use included"
+                    }
+                ],
+                "totalUpfront": 0,
+                "note": "All-inclusive: no admin/sign-up fee, free padlock.",
+                "confidence": "high",
+                "source": "https://www.metro-storage.co.uk/prices/",
+                "lastResearched": "2026-06-28"
+            },
+            "storageking": {
+                "items": [
+                    {
+                        "type": "admin",
+                        "label": "Admin / set-up fee",
+                        "amountGBP": 0,
+                        "oneOff": true
+                    },
+                    {
+                        "type": "deposit",
+                        "label": "Deposit",
+                        "amountGBP": 0,
+                        "oneOff": true
+                    },
+                    {
+                        "type": "padlock",
+                        "label": "Padlock / digital key",
+                        "amountGBP": null,
+                        "oneOff": true,
+                        "note": "Own lock; price varies by store, not published"
+                    }
+                ],
+                "totalUpfront": 0,
+                "note": "No admin fee, no deposit. You supply your own padlock/digital key (price varies, unpublished).",
+                "confidence": "medium",
+                "source": "https://www.storageking.co.uk/faqs/",
+                "lastResearched": "2026-06-28"
+            },
+            "shurgard": {
+                "items": [
+                    {
+                        "type": "admin",
+                        "label": "Admin fee (waived online)",
+                        "amountGBP": 20,
+                        "oneOff": true,
+                        "note": "One-off for in-store/phone sign-up; £0 if you rent online"
+                    },
+                    {
+                        "type": "padlock",
+                        "label": "Padlock (in-store)",
+                        "amountGBP": 14.9,
+                        "oneOff": true,
+                        "note": "Sealed lock if your own doesn't fit; optional"
+                    },
+                    {
+                        "type": "deposit",
+                        "label": "Deposit",
+                        "amountGBP": 0,
+                        "oneOff": true
+                    }
+                ],
+                "totalUpfront": 0,
+                "note": "Admin fee £20 but waived when you rent online. No deposit. Padlock £14.90 only if needed.",
+                "confidence": "high",
+                "source": "https://www.shurgard.com/en-gb/self-storage/why-shurgard/faqs/pricing-and-promotions",
+                "lastResearched": "2026-06-28"
+            },
+            "safestore": {
+                "items": [
+                    {
+                        "type": "deposit",
+                        "label": "Security deposit",
+                        "amountGBP": null,
+                        "oneOff": true,
+                        "note": "Required on move-in; amount not published"
+                    },
+                    {
+                        "type": "padlock",
+                        "label": "Padlock (in-store)",
+                        "amountGBP": null,
+                        "oneOff": true
+                    },
+                    {
+                        "type": "admin",
+                        "label": "Claims admin fee",
+                        "amountGBP": 50,
+                        "oneOff": false,
+                        "note": "Deducted from any claim — not an upfront fee"
+                    }
+                ],
+                "totalUpfront": null,
+                "note": "Deposit + padlock required on move-in but amounts not published (quote/in-store). £50 claims-admin applies only on a claim.",
+                "confidence": "low",
+                "source": "https://www.safestore.co.uk/faqs/",
+                "lastResearched": "2026-06-28"
+            }
+        }
     },
-    {
-        "date": "2026-01-20",
-        "provider": "safestore",
-        "size": 25,
-        "oldPrice": 33,
-        "newPrice": 34
-    },
-    {
-        "date": "2026-01-20",
-        "provider": "safestore",
-        "size": 50,
-        "oldPrice": 55,
-        "newPrice": 56
-    },
-    {
-        "date": "2026-01-27",
-        "provider": "urban",
-        "size": 25,
-        "oldPrice": 29,
-        "newPrice": 30
-    },
-    {
-        "date": "2026-01-27",
-        "provider": "urban",
-        "size": 50,
-        "oldPrice": 50,
-        "newPrice": 51
-    },
-    {
-        "date": "2026-01-27",
-        "provider": "bigyellow",
-        "size": 50,
-        "oldPrice": 60,
-        "newPrice": 61
-    },
-    {
-        "date": "2026-02-03",
-        "provider": "access",
-        "size": 50,
-        "oldPrice": 53,
-        "newPrice": 54
-    },
-    {
-        "date": "2026-02-10",
-        "provider": "urban",
-        "size": 50,
-        "oldPrice": 51,
-        "newPrice": 52
-    },
-    {
-        "date": "2026-02-10",
-        "provider": "safestore",
-        "size": 25,
-        "oldPrice": 34,
-        "newPrice": 35
-    },
-    {
-        "date": "2026-02-10",
-        "provider": "bigyellow",
-        "size": 25,
-        "oldPrice": 37,
-        "newPrice": 38
-    },
-    {
-        "date": "2026-02-10",
-        "provider": "bigyellow",
-        "size": 50,
-        "oldPrice": 61,
-        "newPrice": 62
-    },
-    {
-        "date": "2026-02-24",
-        "provider": "access",
-        "size": 25,
-        "oldPrice": 32,
-        "newPrice": 32.5
-    },
-    {
-        "date": "2026-02-24",
-        "provider": "access",
-        "size": 50,
-        "oldPrice": 54,
-        "newPrice": 55
-    },
-    {
-        "date": "2026-02-24",
-        "provider": "safestore",
-        "size": 50,
-        "oldPrice": 57,
-        "newPrice": 58
-    },
-    {
-        "date": "2026-06-22",
-        "provider": "access",
-        "size": 25,
-        "oldPrice": 45.46,
-        "newPrice": 45.69
-    },
-    {
-        "date": "2026-06-22",
-        "provider": "access",
-        "size": 75,
-        "oldPrice": 112.38,
-        "newPrice": 108.92
-    },
-    {
-        "date": "2026-06-22",
-        "provider": "access",
-        "size": 100,
-        "oldPrice": 132.92,
-        "newPrice": 137.77
-    },
-    {
-        "date": "2026-06-22",
-        "provider": "urban",
-        "size": 25,
-        "oldPrice": 45.19,
-        "newPrice": 57.93
-    },
-    {
-        "date": "2026-06-22",
-        "provider": "urban",
-        "size": 50,
-        "oldPrice": 61.73,
-        "newPrice": 74.95
-    },
-    {
-        "date": "2026-06-22",
-        "provider": "urban",
-        "size": 75,
-        "oldPrice": 76.6,
-        "newPrice": 100.17
-    },
-    {
-        "date": "2026-06-22",
-        "provider": "urban",
-        "size": 100,
-        "oldPrice": 97.72,
-        "newPrice": 135.31
-    },
-    {
-        "date": "2026-06-22",
-        "provider": "bigyellow",
-        "size": 25,
-        "oldPrice": 37.8,
-        "newPrice": 55.2
-    },
-    {
-        "date": "2026-06-22",
-        "provider": "bigyellow",
-        "size": 50,
-        "oldPrice": 59.4,
-        "newPrice": 65.1
-    },
-    {
-        "date": "2026-06-22",
-        "provider": "bigyellow",
-        "size": 75,
-        "oldPrice": 80.7,
-        "newPrice": 94.5
-    },
-    {
-        "date": "2026-06-22",
-        "provider": "bigyellow",
-        "size": 100,
-        "oldPrice": 101.7,
-        "newPrice": 104.4
-    },
-    {
-        "date": "2026-06-22",
-        "provider": "bigyellow",
-        "size": 150,
-        "oldPrice": 190.5,
-        "newPrice": 162.9
-    }
-];
-
-// Deals history
-const DEALS_HISTORY = [
-    {
-        "provider": "metro",
-        "text": "50% off for up to 12 weeks",
-        "firstSeen": "2026-02-01",
-        "lastSeen": "2026-03-14",
-        "active": false
-    },
-    {
-        "provider": "access",
-        "text": "50% off up to 13 weeks storage",
-        "firstSeen": "2026-01-15",
-        "lastSeen": "2026-06-22",
-        "active": true
-    },
-    {
-        "provider": "urban",
-        "text": "50% off your first 2 months + Price Match Guarantee",
-        "firstSeen": "2026-02-10",
-        "lastSeen": "2026-03-14",
-        "active": true
-    },
-    {
-        "provider": "safestore",
-        "text": "First 8 weeks free on selected units",
-        "firstSeen": "2025-11-15",
-        "lastSeen": "2026-01-10",
-        "active": false
-    },
-    {
-        "provider": "safestore",
-        "text": "50% off for first 8 weeks",
-        "firstSeen": "2026-03-01",
-        "lastSeen": "2026-03-14",
-        "active": false
-    },
-    {
-        "provider": "bigyellow",
-        "text": "25% off first 3 months",
-        "firstSeen": "2025-12-01",
-        "lastSeen": "2026-01-31",
-        "active": false
-    },
-    {
-        "provider": "metro",
-        "text": "50% off your first 8 weeks\n\nAddress:\n27 Maryland Walk, Islington, London N1 8QZ\n\nExact location using What 3 Words:\nladder.",
-        "firstSeen": "2026-03-14",
-        "lastSeen": "2026-03-14",
-        "active": false
-    },
-    {
-        "provider": "access",
-        "text": "50% off up to 13 weeks storage\n\nat Access Self Storage Islington\n\n4.",
-        "firstSeen": "2026-03-14",
-        "lastSeen": "2026-03-14",
-        "active": true
-    },
-    {
-        "provider": "urban",
-        "text": "50% off your first two months!",
-        "firstSeen": "2026-03-14",
-        "lastSeen": "2026-03-14",
-        "active": true
-    },
-    {
-        "provider": "safestore",
-        "text": "Lowest Price Guarantee*",
-        "firstSeen": "2026-03-14",
-        "lastSeen": "2026-03-14",
-        "active": false
-    },
-    {
-        "provider": "urban",
-        "text": "50% off your first two months",
-        "firstSeen": "2026-03-14",
-        "lastSeen": "2026-06-22",
-        "active": true
-    },
-    {
-        "provider": "metro",
-        "text": "50% off your first 8 weeks",
-        "firstSeen": "2026-03-14",
-        "lastSeen": "2026-06-22",
-        "active": true
-    },
-    {
-        "provider": "safestore",
-        "text": "50% off storage for 8 weeks",
-        "firstSeen": "2026-06-22",
-        "lastSeen": "2026-06-22",
-        "active": true
-    },
-    {
-        "provider": "bigyellow",
-        "text": "50% off for up to 8 weeks",
-        "firstSeen": "2026-06-22",
-        "lastSeen": "2026-06-22",
-        "active": true
-    }
-];
-
-// Scrape status
-const SCRAPE_STATUS = {
-    "metro": {
-        "status": "ok",
-        "lastSuccess": "2026-03-14",
-        "pricesFound": 5,
-        "message": "Internal price sheet"
-    },
-    "access": {
-        "status": "ok",
-        "lastSuccess": "2026-06-22",
-        "pricesFound": 5,
-        "message": "Sources: quote-form:3 (5/5 sizes)"
-    },
-    "urban": {
-        "status": "ok",
-        "lastSuccess": "2026-06-22",
-        "pricesFound": 8,
-        "message": "Sources: quote-form:8 (8/5 sizes)"
-    },
-    "safestore": {
-        "status": "partial",
-        "lastSuccess": "2026-03-14",
-        "pricesFound": 5,
-        "message": "Using cached prices - no new data today"
-    },
-    "bigyellow": {
-        "status": "partial",
-        "lastSuccess": "2026-03-14",
-        "pricesFound": 5,
-        "message": "Using cached prices - no new data today"
+    "victoria": {
+        "label": "Victoria / Pimlico",
+        "locationBadge": "Victoria / Pimlico, SW1",
+        "yourStore": "Metro Storage Victoria/Pimlico",
+        "providers": {
+            "metro": {
+                "name": "Metro Storage",
+                "shortName": "Metro",
+                "isYou": true,
+                "url": "https://www.metro-storage.co.uk/",
+                "color": "#6366f1",
+                "location": "Victoria / Pimlico, SW1"
+            },
+            "vanguard": {
+                "name": "Vanguard Victoria",
+                "shortName": "Vanguard",
+                "isYou": false,
+                "url": "https://www.vanguardstorage.co.uk/location/victoria",
+                "color": "#14b8a6",
+                "location": "Arneway St, SW1P 2TX"
+            },
+            "bigyellow": {
+                "name": "Big Yellow Nine Elms",
+                "shortName": "Big Yellow",
+                "isYou": false,
+                "url": "https://www.bigyellow.co.uk/nine-elms-self-storage-units",
+                "color": "#ef4444",
+                "location": "Stewarts Rd, SW8 4UB"
+            },
+            "shurgard": {
+                "name": "Shurgard Bloomsbury",
+                "shortName": "Shurgard",
+                "isYou": false,
+                "url": "https://www.shurgard.com/en-gb/self-storage-uk/london/bloomsbury",
+                "color": "#a855f7",
+                "location": "Woburn Pl, WC1H 0ND"
+            }
+        },
+        "currentPrices": {
+            "metro": {
+                "25": 49,
+                "50": 80,
+                "75": 110.5,
+                "100": 136,
+                "150": 185
+            },
+            "vanguard": {
+                "25": 42,
+                "50": 66
+            },
+            "bigyellow": {},
+            "shurgard": {}
+        },
+        "currentDeals": {
+            "metro": {
+                "active": false,
+                "text": "No current deal recorded",
+                "discountPct": 0,
+                "maxWeeks": 0,
+                "firstSeen": "2026-06-28",
+                "lastSeen": "2026-06-28"
+            },
+            "vanguard": {
+                "active": true,
+                "text": "50% off up to 8 weeks + free one-trip man & van (within 5mi)",
+                "discountPct": 50,
+                "maxWeeks": 8,
+                "firstSeen": "2026-06-28",
+                "lastSeen": "2026-06-28"
+            },
+            "bigyellow": {
+                "active": true,
+                "text": "50% off for up to 8 weeks",
+                "discountPct": 50,
+                "maxWeeks": 8,
+                "firstSeen": "2026-06-28",
+                "lastSeen": "2026-06-28"
+            },
+            "shurgard": {
+                "active": true,
+                "text": "£1 first month's rent (selected units)",
+                "discountPct": 0,
+                "maxWeeks": 0,
+                "firstSeen": "2026-06-28",
+                "lastSeen": "2026-06-28"
+            }
+        },
+        "priceHistory": [],
+        "priceChanges": [],
+        "dealsHistory": [
+            {
+                "provider": "vanguard",
+                "text": "50% off up to 8 weeks + free one-trip man & van (within 5mi)",
+                "firstSeen": "2026-06-28",
+                "lastSeen": "2026-06-28",
+                "active": true
+            },
+            {
+                "provider": "bigyellow",
+                "text": "50% off for up to 8 weeks",
+                "firstSeen": "2026-06-28",
+                "lastSeen": "2026-06-28",
+                "active": true
+            },
+            {
+                "provider": "shurgard",
+                "text": "£1 first month's rent (selected units)",
+                "firstSeen": "2026-06-28",
+                "lastSeen": "2026-06-28",
+                "active": true
+            }
+        ],
+        "scrapeStatus": {
+            "metro": {
+                "status": "ok",
+                "lastSuccess": "2026-06-28",
+                "pricesFound": 5,
+                "message": "Internal price sheet"
+            },
+            "vanguard": {
+                "status": "partial",
+                "lastSuccess": null,
+                "pricesFound": 2,
+                "message": "Researched 2026-06-28 — 25/50 sqft indicative (aggregator), rest quote-only"
+            },
+            "bigyellow": {
+                "status": "partial",
+                "lastSuccess": null,
+                "pricesFound": 0,
+                "message": "Researched 2026-06-28 — rent quote-only"
+            },
+            "shurgard": {
+                "status": "partial",
+                "lastSuccess": null,
+                "pricesFound": 0,
+                "message": "Researched 2026-06-28 — rent quote-only; max 100 sqft"
+            }
+        },
+        "insurance": {
+            "metro": {
+                "brand": "StoreReady Contents Protection",
+                "mandatory": true,
+                "model": "included",
+                "published": "full",
+                "entryWeekly": 0,
+                "tiers": [],
+                "note": "Cover INCLUDED FREE in the rent, scaling with unit size: 25→£2k, 50→£4k, 75→£5k, 100→£8k, 150→£10k. Excess above the included level charged at £4 per £1,000 / 4 weeks.",
+                "confidence": "high",
+                "source": "https://www.metro-storage.co.uk/knowledge-centre/i-insure-goods/",
+                "lastResearched": "2026-06-28",
+                "coverBySize": {
+                    "25": 2000,
+                    "50": 4000,
+                    "75": 5000,
+                    "100": 8000,
+                    "150": 10000
+                }
+            },
+            "vanguard": {
+                "brand": "Open Cover Policy",
+                "mandatory": true,
+                "model": "quote-only",
+                "published": "none",
+                "entryWeekly": null,
+                "tiers": [],
+                "note": "Mandatory: all goods insured for replacement value (own cover accepted). Vanguard's Open Cover Policy (new-for-old, excludes clothing/linen). No rate or tier ladder published — quote-only.",
+                "confidence": "low",
+                "source": "https://www.vanguardstorage.co.uk/self-storage-terms-conditions",
+                "lastResearched": "2026-06-28"
+            },
+            "bigyellow": {
+                "brand": "Enhanced Liability Service",
+                "mandatory": true,
+                "model": "tiered",
+                "published": "partial",
+                "entryWeekly": 6.25,
+                "tiers": [
+                    {
+                        "coverGBP": 4000,
+                        "costGBP": 6.25,
+                        "period": "week"
+                    },
+                    {
+                        "coverGBP": 6000,
+                        "costGBP": 8,
+                        "period": "week"
+                    }
+                ],
+                "note": "Mandatory (own policy or their Enhanced Liability Service). From £6.25/wk for £4,000 cover; £8.00/wk for £6,000 (stated average). Higher tiers quote-only.",
+                "confidence": "medium",
+                "source": "https://www.bigyellow.co.uk/faqs/insurance-contents-protection/",
+                "lastResearched": "2026-06-28"
+            },
+            "shurgard": {
+                "brand": "SHURProtect",
+                "mandatory": true,
+                "model": "tiered",
+                "published": "full",
+                "entryWeekly": 4.62,
+                "tiers": [
+                    {
+                        "coverGBP": 2000,
+                        "costGBP": 20,
+                        "period": "month"
+                    },
+                    {
+                        "coverGBP": 4000,
+                        "costGBP": 26,
+                        "period": "month"
+                    },
+                    {
+                        "coverGBP": 7500,
+                        "costGBP": 36,
+                        "period": "month"
+                    },
+                    {
+                        "coverGBP": 10000,
+                        "costGBP": 48,
+                        "period": "month"
+                    },
+                    {
+                        "coverGBP": 15000,
+                        "costGBP": 60,
+                        "period": "month"
+                    }
+                ],
+                "note": "SHURProtect, billed monthly, tiered by goods value. Entry £20/mo (£2k cover); a £6/mo £500 tier exists for lockers only. Required unless you provide own cover; above £15k arrange externally. Weekly figure ×12/52.",
+                "confidence": "high",
+                "source": "https://www.shurgard.com/en-gb/self-storage/why-shurgard/goods-protection",
+                "lastResearched": "2026-06-28"
+            }
+        },
+        "adminFees": {
+            "metro": {
+                "items": [
+                    {
+                        "type": "admin",
+                        "label": "Admin / sign-up fee",
+                        "amountGBP": 0,
+                        "oneOff": true
+                    },
+                    {
+                        "type": "padlock",
+                        "label": "Padlock",
+                        "amountGBP": 0,
+                        "oneOff": true,
+                        "note": "Free use included"
+                    }
+                ],
+                "totalUpfront": 0,
+                "note": "All-inclusive: no admin/sign-up fee, free padlock.",
+                "confidence": "high",
+                "source": "https://www.metro-storage.co.uk/prices/",
+                "lastResearched": "2026-06-28"
+            },
+            "vanguard": {
+                "items": [
+                    {
+                        "type": "deposit",
+                        "label": "Refundable deposit",
+                        "amountGBP": null,
+                        "oneOff": true,
+                        "note": "Variable per booking form; refunded within 21 days of leaving"
+                    },
+                    {
+                        "type": "padlock",
+                        "label": "Padlock",
+                        "amountGBP": null,
+                        "oneOff": true,
+                        "note": "Not included; buy from Vanguard or bring own. Price not published"
+                    }
+                ],
+                "totalUpfront": null,
+                "note": "Refundable deposit (variable) + separate lock required; amounts not published. No separate admin fee mentioned.",
+                "confidence": "low",
+                "source": "https://www.vanguardstorage.co.uk/faqs",
+                "lastResearched": "2026-06-28"
+            },
+            "bigyellow": {
+                "items": [
+                    {
+                        "type": "admin",
+                        "label": "Set-up fee",
+                        "amountGBP": 0,
+                        "oneOff": true
+                    },
+                    {
+                        "type": "deposit",
+                        "label": "Security deposit (refundable)",
+                        "amountGBP": null,
+                        "oneOff": true,
+                        "note": "= one week's rent; refunded on vacate"
+                    },
+                    {
+                        "type": "padlock",
+                        "label": "Padlock (in-store)",
+                        "amountGBP": null,
+                        "oneOff": true
+                    }
+                ],
+                "totalUpfront": 0,
+                "note": "No set-up fee. Refundable deposit = one week's rent. Padlock sold in store (price not published).",
+                "confidence": "medium",
+                "source": "https://www.bigyellow.co.uk/faqs/payment/",
+                "lastResearched": "2026-06-28"
+            },
+            "shurgard": {
+                "items": [
+                    {
+                        "type": "admin",
+                        "label": "Admin fee (waived online)",
+                        "amountGBP": 20,
+                        "oneOff": true,
+                        "note": "One-off for in-store/phone sign-up; £0 if you rent online"
+                    },
+                    {
+                        "type": "padlock",
+                        "label": "Padlock (in-store)",
+                        "amountGBP": 14.9,
+                        "oneOff": true,
+                        "note": "Sealed lock if your own doesn't fit; optional"
+                    },
+                    {
+                        "type": "deposit",
+                        "label": "Deposit",
+                        "amountGBP": 0,
+                        "oneOff": true
+                    }
+                ],
+                "totalUpfront": 0,
+                "note": "Admin fee £20 but waived when you rent online. No deposit. Padlock £14.90 only if needed.",
+                "confidence": "high",
+                "source": "https://www.shurgard.com/en-gb/self-storage/why-shurgard/faqs/pricing-and-promotions",
+                "lastResearched": "2026-06-28"
+            }
+        }
     }
 };
 
+const DEFAULT_SITE = "islington";
+
+// Active-site bindings. The render layer (app.js) reads these globals, so a site
+// switch is just loadSite(key) + re-render. They are 'let' so they can be repointed.
+let ACTIVE_SITE, PROVIDERS, CURRENT_PRICES, CURRENT_DEALS, PRICE_HISTORY,
+    PRICE_CHANGES, DEALS_HISTORY, SCRAPE_STATUS, INSURANCE, ADMIN_FEES;
+
+function loadSite(key) {
+    const s = SITES[key];
+    if (!s) return false;
+    ACTIVE_SITE = key;
+    PROVIDERS = s.providers;
+    CURRENT_PRICES = s.currentPrices;
+    CURRENT_DEALS = s.currentDeals;
+    PRICE_HISTORY = s.priceHistory;
+    PRICE_CHANGES = s.priceChanges;
+    DEALS_HISTORY = s.dealsHistory;
+    SCRAPE_STATUS = s.scrapeStatus;
+    INSURANCE = s.insurance;
+    ADMIN_FEES = s.adminFees;
+    return true;
+}
+loadSite(DEFAULT_SITE);
+
 // Metadata
 const DATA_META = {
-    lastScraped: "2026-06-22T20:45:54.759Z",
-    scraperVersion: "4.0.0",
-    location: "Islington, N1",
-    note: "Auto-generated by scraper. Aggregator daily, quotes weekly (Mondays)."
+    "lastScraped": "2026-06-28T00:00:00.000Z",
+    "scraperVersion": "5.0.0",
+    "location": "Multi-site (Islington, Bayswater, Victoria/Pimlico)",
+    "note": "Multi-site. Scraper rebuilds Islington's scraped blocks; per-site INSURANCE/ADMIN_FEES + non-Islington sites are manually maintained and preserved."
 };
