@@ -6099,10 +6099,17 @@ const SITES = {
             },
             "storageking": {},
             "shurgard": {
-                "25": 51.46,
-                "50": 62.77
+                "50": 74.77,
+                "75": 80.31,
+                "100": 137.54
             },
-            "safestore": {}
+            "safestore": {
+                "25": 75.99,
+                "50": 105.49,
+                "75": 129.99,
+                "100": 186.99,
+                "150": 326.99
+            }
         },
         "currentDeals": {
             "metro": {
@@ -6177,16 +6184,16 @@ const SITES = {
                 "message": "Researched 2026-06-28 — rent quote-only"
             },
             "shurgard": {
-                "status": "partial",
+                "status": "ok",
                 "lastSuccess": "2026-06-28",
-                "pricesFound": 2,
-                "message": "Indicative (storagelocator aggregator): 25/50 sqft only; 75/100/150 quote-only"
+                "pricesFound": 3,
+                "message": "Real on-screen prices (shurgard.com); 25/150 sqft not offered at this store"
             },
             "safestore": {
-                "status": "partial",
-                "lastSuccess": null,
-                "pricesFound": 0,
-                "message": "Researched 2026-06-28 — rent quote-only (gated form)"
+                "status": "ok",
+                "lastSuccess": "2026-06-28",
+                "pricesFound": 5,
+                "message": "Real quote enquiries (standard wk rate); online booking ~10-27% less + intro promo"
             }
         },
         "insurance": {
