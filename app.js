@@ -844,18 +844,50 @@
             const known = compPriced.length, total = comps.length;
             const avg = known ? compPriced.reduce((s, x) => s + x.p, 0) / known : null;
 
-            // position among Metro + priced competitors
+            // --- Insurance-adjusted "all-in" calibration ---
+            // Metro bundles cover free, so its all-in == rent. For competitors, add what
+            // they'd charge to match Metro's cover at this size (only where that's known).
+            const cover = (ins.metro && ins.metro.coverBySize) ? ins.metro.coverBySize[size] : null;
+            const compAllIn = compPriced.map(x => {
+                const iw = insWeeklyForCover(ins[x.k], cover);
+                return iw.known ? { k: x.k, p: x.p + iw.weekly } : null;
+            }).filter(Boolean);
+            const allInKnown = compAllIn.length;
+            const allInAvg = allInKnown ? compAllIn.reduce((s, x) => s + x.p, 0) / allInKnown : null;
+            const metroAllIn = hasNum(metroP) ? metroP : null;  // insurance free => all-in == rent
+
+            // Headline rank: prefer insurance-adjusted (all-in); fall back to rent-only.
             let posHtml = '<span class="ov-pos na">no price data</span>';
-            if (hasNum(metroP) && known) {
+            if (metroAllIn != null && allInKnown) {
+                const all = [{ k: "metro", p: metroAllIn }, ...compAllIn].sort((a, b) => a.p - b.p);
+                const pos = all.findIndex(x => x.k === "metro") + 1;
+                const cls = pos === 1 ? "good" : pos <= 2 ? "mid" : "bad";
+                posHtml = `<span class="ov-pos ${cls}" title="Rank once Metro's free insurance is included on every quote">#${pos} of ${all.length} all-in</span>`;
+            } else if (hasNum(metroP) && known) {
                 const all = [{ k: "metro", p: metroP }, ...compPriced].sort((a, b) => a.p - b.p);
                 const pos = all.findIndex(x => x.k === "metro") + 1;
                 const cls = pos === 1 ? "good" : pos <= 2 ? "mid" : "bad";
-                posHtml = `<span class="ov-pos ${cls}">#${pos} of ${all.length} priced</span>`;
+                posHtml = `<span class="ov-pos ${cls}">#${pos} of ${all.length} on rent</span>`;
             } else if (hasNum(metroP)) {
                 posHtml = '<span class="ov-pos na">competitors quote-only</span>';
             }
 
-            // vs market average
+            // vs all-in market average (insurance-adjusted) — the corrected comparison
+            let allInVal = '<span class="val muted">&mdash;</span>', allInSub = "insurance quote-only";
+            if (allInAvg != null) {
+                allInSub = `avg of ${allInKnown}/${total} all-in`;
+                if (metroAllIn != null) {
+                    const diff = metroAllIn - allInAvg;
+                    const cls = diff < 0 ? "cheaper" : diff > 0 ? "pricier" : "";
+                    const word = diff < 0 ? "below" : "above";
+                    allInVal = `<span class="val ${cls}">${formatGBP(allInAvg)}</span>`;
+                    allInSub = `you ${formatGBP(Math.abs(diff))} ${word} (${allInKnown}/${total})`;
+                } else {
+                    allInVal = `<span class="val">${formatGBP(allInAvg)}</span>`;
+                }
+            }
+
+            // vs rent-only market average (kept for contrast with the all-in figure)
             let avgVal = '<span class="val muted">&mdash;</span>', avgSub = "competitors quote-only";
             if (avg != null) {
                 avgSub = `avg of ${known}/${total} priced`;
@@ -870,10 +902,6 @@
                 }
             }
 
-            const deals = Object.entries(site.currentDeals || {})
-                .filter(([k, d]) => k !== "metro" && d && d.active).length;
-
-            const cover = (ins.metro && ins.metro.coverBySize) ? ins.metro.coverBySize[size] : null;
             const coverLbl = cover ? `£${(cover / 1000).toFixed(cover % 1000 ? 1 : 0)}k` : null;
             const insLine = cover
                 ? `Insurance: <strong>Free</strong> &mdash; ${coverLbl} cover included at ${size} sqft. Competitors add it on top.`
@@ -890,12 +918,12 @@
                 </div>
                 <div class="ov-yourprice">
                     <span class="v">${hasNum(metroP) ? formatGBP(metroP) : "TBD"}</span>
-                    <span class="l">your rent / wk &middot; ${size} sqft</span>
+                    <span class="l">your all-in / wk &middot; ${size} sqft &middot; insurance incl.</span>
                 </div>
                 <div class="ov-stats">
-                    <div class="ov-stat"><span class="k">Market avg</span>${avgVal}<span class="k" style="text-transform:none">${avgSub}</span></div>
+                    <div class="ov-stat"><span class="k">All-in avg</span>${allInVal}<span class="k" style="text-transform:none">${allInSub}</span></div>
+                    <div class="ov-stat"><span class="k">Rent-only avg</span>${avgVal}<span class="k" style="text-transform:none">${avgSub}</span></div>
                     <div class="ov-stat"><span class="k">Competitors</span><span class="val">${total}</span><span class="k" style="text-transform:none">${known} priced, ${total - known} quote-only</span></div>
-                    <div class="ov-stat"><span class="k">Active deals</span><span class="val">${deals}</span><span class="k" style="text-transform:none">competitor offers</span></div>
                     <div class="ov-stat"><span class="k">Your insurance</span><span class="val cheaper">Free</span><span class="k" style="text-transform:none">${coverLbl ? coverLbl + " incl." : "included"}</span></div>
                 </div>
                 <div class="ov-ins">${insLine}</div>
