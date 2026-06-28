@@ -14,27 +14,63 @@
     let selectedPeriod = 30;
     let priceChart = null;
     let sqftChart = null;
+    let ovSize = 50;                          // overview reference size
+    const OVERVIEW_OPT = "__overview__";
 
     // --- Init ---
     function init() {
-        if (sessionStorage.getItem(SESSION_KEY) === "1") {
-            showDashboard();
-        }
         document.getElementById("login-form").addEventListener("submit", handleLogin);
         document.getElementById("logout-btn").addEventListener("click", handleLogout);
+        document.getElementById("ov-logout-btn").addEventListener("click", handleLogout);
+        document.getElementById("back-overview").addEventListener("click", showOverview);
+        document.getElementById("ov-grid").addEventListener("click", e => {
+            const card = e.target.closest(".ov-card");
+            if (card) showDetail(card.dataset.site);
+        });
         setupSiteSelector();
         setupSizeButtons();
         setupTimeButtons();
+        setupOverviewSizeButtons();
+        if (sessionStorage.getItem(SESSION_KEY) === "1") showApp();
+    }
+
+    // --- Views ---
+    function showApp() {
+        document.getElementById("login-screen").style.display = "none";
+        setupManualEntry();                  // bind detail controls once
+        showOverview();
+    }
+
+    function showOverview() {
+        document.getElementById("dashboard").style.display = "none";
+        document.getElementById("overview").style.display = "block";
+        const sel = document.getElementById("site-select");
+        if (sel) sel.value = OVERVIEW_OPT;
+        const u = document.getElementById("ov-updated");
+        if (u && typeof DATA_META !== "undefined") {
+            const d = new Date(DATA_META.lastScraped);
+            u.textContent = `Updated ${d.toLocaleDateString("en-GB")}`;
+        }
+        renderOverview();
+    }
+
+    function showDetail(key) {
+        if (key && key !== OVERVIEW_OPT) switchSite(key);
+        document.getElementById("overview").style.display = "none";
+        document.getElementById("dashboard").style.display = "block";
     }
 
     // --- Multi-site ---
     function setupSiteSelector() {
         const sel = document.getElementById("site-select");
         if (!sel || typeof SITES === "undefined") return;
-        sel.innerHTML = Object.entries(SITES)
-            .map(([key, s]) => `<option value="${key}">${s.label}</option>`).join("");
+        sel.innerHTML = `<option value="${OVERVIEW_OPT}">↩ All sites</option>` +
+            Object.entries(SITES).map(([key, s]) => `<option value="${key}">${s.label}</option>`).join("");
         sel.value = ACTIVE_SITE;
-        sel.addEventListener("change", () => switchSite(sel.value));
+        sel.addEventListener("change", () => {
+            if (sel.value === OVERVIEW_OPT) showOverview();
+            else showDetail(sel.value);
+        });
     }
 
     function switchSite(key) {
@@ -59,7 +95,7 @@
         const input = document.getElementById("password-input").value;
         if (input === PASSWORD_HASH) {
             sessionStorage.setItem(SESSION_KEY, "1");
-            showDashboard();
+            showApp();
         } else {
             const err = document.getElementById("login-error");
             err.style.display = "block";
@@ -71,17 +107,9 @@
     function handleLogout() {
         sessionStorage.removeItem(SESSION_KEY);
         document.getElementById("dashboard").style.display = "none";
+        document.getElementById("overview").style.display = "none";
         document.getElementById("login-screen").style.display = "flex";
         document.getElementById("password-input").value = "";
-    }
-
-    function showDashboard() {
-        document.getElementById("login-screen").style.display = "none";
-        document.getElementById("dashboard").style.display = "block";
-        applyOverrides();
-        setupManualEntry();
-        updateSiteChrome();
-        renderAll();
     }
 
     // --- Controls ---
@@ -771,6 +799,109 @@
         el.textContent = entries.length > 0
             ? "Active overrides: " + entries.join(" | ")
             : "No manual overrides active";
+    }
+
+    // --- Overview (all sites) ---
+    function setupOverviewSizeButtons() {
+        document.querySelectorAll("#ov-size-buttons .size-btn").forEach(btn => {
+            btn.addEventListener("click", () => {
+                document.querySelectorAll("#ov-size-buttons .size-btn").forEach(b => b.classList.remove("active"));
+                btn.classList.add("active");
+                ovSize = parseInt(btn.dataset.size);
+                renderOverview();
+            });
+        });
+    }
+
+    // Site prices with that site's manual overrides overlaid (overview reads sites
+    // directly, not via the active globals).
+    function effectiveSitePrices(key) {
+        const base = (SITES[key] && SITES[key].currentPrices) || {};
+        const out = {};
+        for (const pk in base) out[pk] = Object.assign({}, base[pk]);
+        try {
+            const ov = JSON.parse(localStorage.getItem(`${OVERRIDES_KEY}:${key}`)) || {};
+            for (const pk in ov) { out[pk] = out[pk] || {}; for (const s in ov[pk]) out[pk][parseInt(s)] = ov[pk][s]; }
+        } catch (e) { /* ignore */ }
+        return out;
+    }
+
+    function renderOverview() {
+        const grid = document.getElementById("ov-grid");
+        if (!grid || typeof SITES === "undefined") return;
+        const size = ovSize;
+        const hasNum = v => typeof v === "number" && !isNaN(v);
+
+        grid.innerHTML = Object.entries(SITES).map(([key, site]) => {
+            const prices = effectiveSitePrices(key);
+            const ins = site.insurance || {};
+            const providers = site.providers || {};
+            const metroP = prices.metro ? prices.metro[size] : undefined;
+
+            const comps = Object.keys(providers).filter(k => k !== "metro");
+            const compPriced = comps.map(k => ({ k, p: prices[k] ? prices[k][size] : undefined }))
+                .filter(x => hasNum(x.p));
+            const known = compPriced.length, total = comps.length;
+            const avg = known ? compPriced.reduce((s, x) => s + x.p, 0) / known : null;
+
+            // position among Metro + priced competitors
+            let posHtml = '<span class="ov-pos na">no price data</span>';
+            if (hasNum(metroP) && known) {
+                const all = [{ k: "metro", p: metroP }, ...compPriced].sort((a, b) => a.p - b.p);
+                const pos = all.findIndex(x => x.k === "metro") + 1;
+                const cls = pos === 1 ? "good" : pos <= 2 ? "mid" : "bad";
+                posHtml = `<span class="ov-pos ${cls}">#${pos} of ${all.length} priced</span>`;
+            } else if (hasNum(metroP)) {
+                posHtml = '<span class="ov-pos na">competitors quote-only</span>';
+            }
+
+            // vs market average
+            let avgVal = '<span class="val muted">&mdash;</span>', avgSub = "competitors quote-only";
+            if (avg != null) {
+                avgSub = `avg of ${known}/${total} priced`;
+                if (hasNum(metroP)) {
+                    const diff = metroP - avg;
+                    const cls = diff < 0 ? "cheaper" : diff > 0 ? "pricier" : "";
+                    const word = diff < 0 ? "below" : "above";
+                    avgVal = `<span class="val ${cls}">${formatGBP(avg)}</span>`;
+                    avgSub = `you ${formatGBP(Math.abs(diff))} ${word} (${known}/${total} priced)`;
+                } else {
+                    avgVal = `<span class="val">${formatGBP(avg)}</span>`;
+                }
+            }
+
+            const deals = Object.entries(site.currentDeals || {})
+                .filter(([k, d]) => k !== "metro" && d && d.active).length;
+
+            const cover = (ins.metro && ins.metro.coverBySize) ? ins.metro.coverBySize[size] : null;
+            const coverLbl = cover ? `£${(cover / 1000).toFixed(cover % 1000 ? 1 : 0)}k` : null;
+            const insLine = cover
+                ? `Insurance: <strong>Free</strong> &mdash; ${coverLbl} cover included at ${size} sqft. Competitors add it on top.`
+                : `Insurance bundled <strong>free</strong>; competitors add it on top.`;
+
+            return `
+            <div class="ov-card" data-site="${key}">
+                <div class="ov-card-head">
+                    <div>
+                        <div class="ov-site-name">${site.label}</div>
+                        <div class="ov-site-loc">${site.locationBadge || ""} &middot; ${providers.metro ? providers.metro.name : "Metro"}</div>
+                    </div>
+                    ${posHtml}
+                </div>
+                <div class="ov-yourprice">
+                    <span class="v">${hasNum(metroP) ? formatGBP(metroP) : "TBD"}</span>
+                    <span class="l">your rent / wk &middot; ${size} sqft</span>
+                </div>
+                <div class="ov-stats">
+                    <div class="ov-stat"><span class="k">Market avg</span>${avgVal}<span class="k" style="text-transform:none">${avgSub}</span></div>
+                    <div class="ov-stat"><span class="k">Competitors</span><span class="val">${total}</span><span class="k" style="text-transform:none">${known} priced, ${total - known} quote-only</span></div>
+                    <div class="ov-stat"><span class="k">Active deals</span><span class="val">${deals}</span><span class="k" style="text-transform:none">competitor offers</span></div>
+                    <div class="ov-stat"><span class="k">Your insurance</span><span class="val cheaper">Free</span><span class="k" style="text-transform:none">${coverLbl ? coverLbl + " incl." : "included"}</span></div>
+                </div>
+                <div class="ov-ins">${insLine}</div>
+                <div class="ov-cta">View site detail &rarr;</div>
+            </div>`;
+        }).join("");
     }
 
     // --- Helpers ---

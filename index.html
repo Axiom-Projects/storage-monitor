@@ -24,11 +24,48 @@
         </div>
     </div>
 
-    <!-- Main Dashboard -->
-    <div id="dashboard" class="dashboard" style="display:none">
+    <!-- All-sites Overview -->
+    <div id="overview" class="dashboard" style="display:none">
         <header>
             <div class="header-left">
                 <h1>Storage Monitor</h1>
+                <span class="location-badge">All sites</span>
+            </div>
+            <div class="header-right">
+                <span id="ov-updated" class="last-updated"></span>
+                <button id="ov-logout-btn" class="btn-logout">Lock</button>
+            </div>
+        </header>
+
+        <section class="ov-intro">
+            <div>
+                <h2 class="ov-title">Portfolio overview</h2>
+                <p class="ov-sub">Metro vs local competitors across every site. Metro bundles contents protection <strong>free</strong>; competitors add it on top &mdash; the figures below are at the selected unit size. Click a site to drill in.</p>
+            </div>
+            <div class="size-selector">
+                <label>Unit size:</label>
+                <div class="size-buttons" id="ov-size-buttons">
+                    <button class="size-btn" data-size="25">25</button>
+                    <button class="size-btn active" data-size="50">50</button>
+                    <button class="size-btn" data-size="75">75</button>
+                    <button class="size-btn" data-size="100">100</button>
+                    <button class="size-btn" data-size="150">150</button>
+                </div>
+            </div>
+        </section>
+
+        <section class="ov-grid" id="ov-grid"></section>
+
+        <footer>
+            <p>Storage Monitor &mdash; multi-site competitive intelligence &middot; click any site for full detail</p>
+        </footer>
+    </div>
+
+    <!-- Main Dashboard (per-site detail) -->
+    <div id="dashboard" class="dashboard" style="display:none">
+        <header>
+            <div class="header-left">
+                <button id="back-overview" class="btn-back" title="Back to all-sites overview">&larr; All sites</button>
                 <select id="site-select" class="site-select" aria-label="Select site"></select>
                 <span class="location-badge" id="location-badge">Islington, N1</span>
             </div>
