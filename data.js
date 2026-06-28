@@ -5895,13 +5895,15 @@ const SITES = {
             "safestore": {
                 "brand": "StoreProtect",
                 "mandatory": true,
-                "model": "quote-only",
-                "published": "none",
-                "entryWeekly": null,
-                "tiers": [],
-                "note": "Mandatory (own insurance or StoreProtect enhanced-liability). Value-tiered but no ladder published — quoted in store. Separate £50 claims-admin fee is deducted from any claim settlement.",
-                "confidence": "low",
-                "source": "https://www.safestore.co.uk/storeprotect/",
+                "model": "rate",
+                "published": "flow",
+                "entryWeekly": 1.9,
+                "ratePer1000": 1.9,
+                "ratePeriod": "week",
+                "minCoverGBP": 1000,
+                "note": "StoreProtect enhanced liability, mandatory unless you provide own cover (refunded if you show proof within 14 days). Charged on declared replacement value. From the live booking basket: £19.00/4wks (exc VAT) for £3,000 cover and £38.00/4wks for £6,000 — exactly linear, so £1.90 per £1,000 of cover per week inc VAT (£1.58 exc VAT). Separate £50 claims-admin fee deducted from any settlement.",
+                "confidence": "high",
+                "source": "https://www.safestore.co.uk/ (online booking: Date & Insurance / Storage Basket)",
                 "lastResearched": "2026-06-28"
             },
             "bigyellow": {
@@ -6229,7 +6231,7 @@ const SITES = {
                 "published": "none",
                 "entryWeekly": null,
                 "tiers": [],
-                "note": "Mandatory in-house cover (own external policy accepted). Priced per £1,000 of declared value; £100k total limit, £100 excess (£250 flood at W2). £-rate not published — quote-only.",
+                "note": "Mandatory in-house cover (own external policy accepted, refundable). Priced per £1,000 of declared value; £100k total limit, £100 excess (£250 flood at the W2/Queensway site). The quoted rent EXCLUDES insurance + padlock (confirmed on the live quote). The per-£1k rate is disclosed only at the online reserve step (behind a £10 'secure' payment) or by phone — Bayswater units are all 'call to reserve', so the rate is not obtainable online. Quote-only.",
                 "confidence": "medium",
                 "source": "https://www.storageking.co.uk/important-information/summary-of-insurance/",
                 "lastResearched": "2026-06-28"
@@ -6275,13 +6277,15 @@ const SITES = {
             "safestore": {
                 "brand": "StoreProtect",
                 "mandatory": true,
-                "model": "quote-only",
-                "published": "none",
-                "entryWeekly": null,
-                "tiers": [],
-                "note": "Mandatory (own insurance or StoreProtect enhanced-liability). Value-tiered but no ladder published — quoted in store. Separate £50 claims-admin fee is deducted from any claim settlement.",
-                "confidence": "low",
-                "source": "https://www.safestore.co.uk/storeprotect/",
+                "model": "rate",
+                "published": "flow",
+                "entryWeekly": 1.9,
+                "ratePer1000": 1.9,
+                "ratePeriod": "week",
+                "minCoverGBP": 1000,
+                "note": "StoreProtect enhanced liability, mandatory unless you provide own cover (refunded if you show proof within 14 days). Charged on declared replacement value. From the live booking basket: £19.00/4wks (exc VAT) for £3,000 cover and £38.00/4wks for £6,000 — exactly linear, so £1.90 per £1,000 of cover per week inc VAT (£1.58 exc VAT). Separate £50 claims-admin fee deducted from any settlement.",
+                "confidence": "high",
+                "source": "https://www.safestore.co.uk/ (online booking: Date & Insurance / Storage Basket)",
                 "lastResearched": "2026-06-28"
             }
         },
@@ -6570,7 +6574,7 @@ const SITES = {
                 "published": "none",
                 "entryWeekly": null,
                 "tiers": [],
-                "note": "Mandatory: all goods insured for replacement value (own cover accepted). Vanguard's Open Cover Policy (new-for-old, excludes clothing/linen). No rate or tier ladder published — quote-only.",
+                "note": "Mandatory: all goods insured for replacement value (own cover accepted). Vanguard's Open Cover Policy (new-for-old, excludes clothing/linen). Confirmed 2026-06-28: the full online Instant Quote/Reserve flow exposes no insurance rate or tier ladder at any step — disclosed only on a personalised/phone quote. Quote-only.",
                 "confidence": "low",
                 "source": "https://www.vanguardstorage.co.uk/self-storage-terms-conditions",
                 "lastResearched": "2026-06-28"
