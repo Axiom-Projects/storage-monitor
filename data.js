@@ -6097,7 +6097,9 @@ const SITES = {
                 "50": 86,
                 "75": 119.5
             },
-            "storageking": {},
+            "storageking": {
+                "50": 75
+            },
             "shurgard": {
                 "50": 74.77,
                 "75": 80.31,
@@ -6179,9 +6181,9 @@ const SITES = {
             },
             "storageking": {
                 "status": "partial",
-                "lastSuccess": null,
-                "pricesFound": 0,
-                "message": "Researched 2026-06-28 — rent quote-only"
+                "lastSuccess": "2026-06-28",
+                "pricesFound": 1,
+                "message": "Real quote (50 sqft standard £75/wk; intro 50% off 2mo). Other sizes quote-only (per-size enquiry)"
             },
             "shurgard": {
                 "status": "ok",
