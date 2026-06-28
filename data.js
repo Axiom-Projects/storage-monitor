@@ -6440,8 +6440,17 @@ const SITES = {
                 "25": 42,
                 "50": 66
             },
-            "bigyellow": {},
-            "shurgard": {}
+            "bigyellow": {
+                "25": 48,
+                "50": 75.3,
+                "75": 102.3,
+                "100": 132.6,
+                "150": 194.1
+            },
+            "shurgard": {
+                "25": 53.77,
+                "50": 63.23
+            }
         },
         "currentDeals": {
             "metro": {
@@ -6510,22 +6519,22 @@ const SITES = {
                 "message": "Internal price sheet"
             },
             "vanguard": {
-                "status": "partial",
-                "lastSuccess": null,
+                "status": "ok",
+                "lastSuccess": "2026-06-28",
                 "pricesFound": 2,
-                "message": "Researched 2026-06-28 — 25/50 sqft indicative (aggregator), rest quote-only"
+                "message": "Real on-screen quote (inc VAT); store only stocks up to ~50 sqft (75/100/150 n/a)"
             },
             "bigyellow": {
-                "status": "partial",
-                "lastSuccess": null,
-                "pricesFound": 0,
-                "message": "Researched 2026-06-28 — rent quote-only"
+                "status": "ok",
+                "lastSuccess": "2026-06-28",
+                "pricesFound": 5,
+                "message": "Real quote (standard ongoing wk rate); online booking 10-30% less + half-price 8wks"
             },
             "shurgard": {
-                "status": "partial",
-                "lastSuccess": null,
-                "pricesFound": 0,
-                "message": "Researched 2026-06-28 — rent quote-only; max 100 sqft"
+                "status": "ok",
+                "lastSuccess": "2026-06-28",
+                "pricesFound": 2,
+                "message": "Real on-screen prices; small-format store 15-60 sqft (25=nearest 20sqft; 50 exact; 75/100/150 n/a)"
             }
         },
         "insurance": {
