@@ -6098,7 +6098,10 @@ const SITES = {
                 "75": 119.5
             },
             "storageking": {},
-            "shurgard": {},
+            "shurgard": {
+                "25": 51.46,
+                "50": 62.77
+            },
             "safestore": {}
         },
         "currentDeals": {
@@ -6175,9 +6178,9 @@ const SITES = {
             },
             "shurgard": {
                 "status": "partial",
-                "lastSuccess": null,
-                "pricesFound": 0,
-                "message": "Researched 2026-06-28 — rent quote-only (dynamic online)"
+                "lastSuccess": "2026-06-28",
+                "pricesFound": 2,
+                "message": "Indicative (storagelocator aggregator): 25/50 sqft only; 75/100/150 quote-only"
             },
             "safestore": {
                 "status": "partial",
@@ -6745,7 +6748,7 @@ loadSite(DEFAULT_SITE);
 
 // Metadata
 const DATA_META = {
-    "lastScraped": "2026-06-28T10:27:57.431Z",
+    "lastScraped": "2026-06-28T00:00:00.000Z",
     "scraperVersion": "5.0.0",
     "location": "Multi-site (Islington, Bayswater, Victoria/Pimlico)",
     "note": "Multi-site. Scraper rebuilds Islington's scraped blocks; per-site INSURANCE/ADMIN_FEES + non-Islington sites are manually maintained and preserved."
