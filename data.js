@@ -62,20 +62,20 @@ const SITES = {
             },
             "access": {
                 "25": 99,
-                "50": 66.69,
+                "50": 69.92,
                 "75": 114.23,
                 "100": 137.77,
                 "150": 221.77
             },
             "urban": {
-                "10": 28.59,
+                "10": 24.3,
                 "25": 57.93,
-                "35": 71.16,
-                "50": 79.36,
-                "75": 100.17,
-                "100": 135.31,
-                "125": 170.45,
-                "150": 210.67
+                "35": 56.93,
+                "50": 74.95,
+                "75": 94.28,
+                "100": 127.79,
+                "125": 136.36,
+                "150": 168.54
             },
             "safestore": {
                 "25": 51.49,
@@ -99,7 +99,7 @@ const SITES = {
                 "discountPct": 50,
                 "maxWeeks": 8,
                 "firstSeen": "2026-03-14",
-                "lastSeen": "2026-06-28"
+                "lastSeen": "2026-06-29"
             },
             "access": {
                 "active": true,
@@ -107,7 +107,7 @@ const SITES = {
                 "discountPct": 50,
                 "maxWeeks": 8,
                 "firstSeen": "2026-04-02",
-                "lastSeen": "2026-06-28"
+                "lastSeen": "2026-06-29"
             },
             "urban": {
                 "active": true,
@@ -115,7 +115,7 @@ const SITES = {
                 "discountPct": 50,
                 "maxWeeks": 0,
                 "firstSeen": "2026-03-14",
-                "lastSeen": "2026-06-28"
+                "lastSeen": "2026-06-29"
             },
             "safestore": {
                 "active": true,
@@ -123,7 +123,7 @@ const SITES = {
                 "discountPct": 50,
                 "maxWeeks": 8,
                 "firstSeen": "2026-06-27",
-                "lastSeen": "2026-06-28"
+                "lastSeen": "2026-06-29"
             },
             "bigyellow": {
                 "active": true,
@@ -5086,6 +5086,49 @@ const SITES = {
                         "150": 190.5
                     }
                 }
+            },
+            {
+                "date": "2026-06-29",
+                "prices": {
+                    "metro": {
+                        "25": 46.75,
+                        "50": 78.5,
+                        "75": 101.25,
+                        "100": 123.75,
+                        "150": 188.75
+                    },
+                    "access": {
+                        "25": 99,
+                        "50": 69.92,
+                        "75": 114.23,
+                        "100": 137.77,
+                        "150": 221.77
+                    },
+                    "urban": {
+                        "10": 24.3,
+                        "25": 57.93,
+                        "35": 56.93,
+                        "50": 74.95,
+                        "75": 94.28,
+                        "100": 127.79,
+                        "125": 136.36,
+                        "150": 168.54
+                    },
+                    "safestore": {
+                        "25": 51.49,
+                        "50": 91.99,
+                        "75": 125.49,
+                        "100": 120.49,
+                        "150": 258.99
+                    },
+                    "bigyellow": {
+                        "25": 37.8,
+                        "50": 59.4,
+                        "75": 80.7,
+                        "100": 101.7,
+                        "150": 190.5
+                    }
+                }
             }
         ],
         "priceChanges": [
@@ -5669,6 +5712,62 @@ const SITES = {
                 "size": 10,
                 "oldPrice": 20.01,
                 "newPrice": 28.59
+            },
+            {
+                "date": "2026-06-29",
+                "provider": "access",
+                "size": 50,
+                "oldPrice": 66.69,
+                "newPrice": 69.92
+            },
+            {
+                "date": "2026-06-29",
+                "provider": "urban",
+                "size": 10,
+                "oldPrice": 28.59,
+                "newPrice": 24.3
+            },
+            {
+                "date": "2026-06-29",
+                "provider": "urban",
+                "size": 35,
+                "oldPrice": 71.16,
+                "newPrice": 56.93
+            },
+            {
+                "date": "2026-06-29",
+                "provider": "urban",
+                "size": 50,
+                "oldPrice": 79.36,
+                "newPrice": 74.95
+            },
+            {
+                "date": "2026-06-29",
+                "provider": "urban",
+                "size": 75,
+                "oldPrice": 100.17,
+                "newPrice": 94.28
+            },
+            {
+                "date": "2026-06-29",
+                "provider": "urban",
+                "size": 100,
+                "oldPrice": 135.31,
+                "newPrice": 127.79
+            },
+            {
+                "date": "2026-06-29",
+                "provider": "urban",
+                "size": 125,
+                "oldPrice": 170.45,
+                "newPrice": 136.36
+            },
+            {
+                "date": "2026-06-29",
+                "provider": "urban",
+                "size": 150,
+                "oldPrice": 210.67,
+                "newPrice": 168.54
             }
         ],
         "dealsHistory": [
@@ -5746,14 +5845,14 @@ const SITES = {
                 "provider": "urban",
                 "text": "50% off your first two months",
                 "firstSeen": "2026-03-14",
-                "lastSeen": "2026-06-28",
+                "lastSeen": "2026-06-29",
                 "active": true
             },
             {
                 "provider": "metro",
                 "text": "50% off your first 8 weeks",
                 "firstSeen": "2026-03-14",
-                "lastSeen": "2026-06-28",
+                "lastSeen": "2026-06-29",
                 "active": true
             },
             {
@@ -5774,7 +5873,7 @@ const SITES = {
                 "provider": "access",
                 "text": "50% off up to 8 weeks storage",
                 "firstSeen": "2026-04-02",
-                "lastSeen": "2026-06-28",
+                "lastSeen": "2026-06-29",
                 "active": true
             },
             {
@@ -5802,7 +5901,7 @@ const SITES = {
                 "provider": "safestore",
                 "text": "50% Off 8 Weeks",
                 "firstSeen": "2026-06-27",
-                "lastSeen": "2026-06-28",
+                "lastSeen": "2026-06-29",
                 "active": true
             }
         ],
@@ -5814,16 +5913,16 @@ const SITES = {
                 "message": "Internal price sheet"
             },
             "access": {
-                "status": "partial",
-                "lastSuccess": "2026-06-22",
+                "status": "ok",
+                "lastSuccess": "2026-06-29",
                 "pricesFound": 5,
-                "message": "Using cached prices - no new data today"
+                "message": "Sources: quote-form:1 (5/5 sizes)"
             },
             "urban": {
-                "status": "partial",
-                "lastSuccess": "2026-06-22",
+                "status": "ok",
+                "lastSuccess": "2026-06-29",
                 "pricesFound": 8,
-                "message": "Using cached prices - no new data today"
+                "message": "Sources: quote-form:8 (8/5 sizes)"
             },
             "safestore": {
                 "status": "partial",
@@ -6774,7 +6873,7 @@ loadSite(DEFAULT_SITE);
 
 // Metadata
 const DATA_META = {
-    "lastScraped": "2026-06-28T00:00:00.000Z",
+    "lastScraped": "2026-06-29T12:33:05.796Z",
     "scraperVersion": "5.0.0",
     "location": "Multi-site (Islington, Bayswater, Victoria/Pimlico)",
     "note": "Multi-site. Scraper rebuilds Islington's scraped blocks; per-site INSURANCE/ADMIN_FEES + non-Islington sites are manually maintained and preserved."
