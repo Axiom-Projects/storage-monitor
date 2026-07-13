@@ -61,11 +61,11 @@ const SITES = {
                 "150": 188.75
             },
             "access": {
-                "25": 99,
-                "50": 37.5,
+                "25": 56.31,
+                "50": 66.69,
                 "75": 114.23,
-                "100": 137.77,
-                "150": 221.77
+                "100": 135.23,
+                "150": 220.15
             },
             "urban": {
                 "10": 25.73,
@@ -73,7 +73,7 @@ const SITES = {
                 "35": 56.93,
                 "50": 74.95,
                 "75": 94.28,
-                "100": 127.79,
+                "100": 120.27,
                 "125": 170.45,
                 "150": 210.67
             },
@@ -99,7 +99,7 @@ const SITES = {
                 "discountPct": 50,
                 "maxWeeks": 8,
                 "firstSeen": "2026-06-30",
-                "lastSeen": "2026-07-12"
+                "lastSeen": "2026-07-13"
             },
             "access": {
                 "active": true,
@@ -107,7 +107,7 @@ const SITES = {
                 "discountPct": 50,
                 "maxWeeks": 13,
                 "firstSeen": "2026-01-15",
-                "lastSeen": "2026-07-12"
+                "lastSeen": "2026-07-13"
             },
             "urban": {
                 "active": true,
@@ -115,7 +115,7 @@ const SITES = {
                 "discountPct": 50,
                 "maxWeeks": 0,
                 "firstSeen": "2026-03-14",
-                "lastSeen": "2026-07-12"
+                "lastSeen": "2026-07-13"
             },
             "safestore": {
                 "active": true,
@@ -123,7 +123,7 @@ const SITES = {
                 "discountPct": 50,
                 "maxWeeks": 8,
                 "firstSeen": "2026-06-27",
-                "lastSeen": "2026-07-12"
+                "lastSeen": "2026-07-13"
             },
             "bigyellow": {
                 "active": true,
@@ -5688,6 +5688,49 @@ const SITES = {
                         "150": 190.5
                     }
                 }
+            },
+            {
+                "date": "2026-07-13",
+                "prices": {
+                    "metro": {
+                        "25": 46.75,
+                        "50": 78.5,
+                        "75": 101.25,
+                        "100": 123.75,
+                        "150": 188.75
+                    },
+                    "access": {
+                        "25": 56.31,
+                        "50": 66.69,
+                        "75": 114.23,
+                        "100": 135.23,
+                        "150": 220.15
+                    },
+                    "urban": {
+                        "10": 25.73,
+                        "25": 60.83,
+                        "35": 56.93,
+                        "50": 74.95,
+                        "75": 94.28,
+                        "100": 120.27,
+                        "125": 170.45,
+                        "150": 210.67
+                    },
+                    "safestore": {
+                        "25": 51.49,
+                        "50": 91.99,
+                        "75": 125.49,
+                        "100": 120.49,
+                        "150": 258.99
+                    },
+                    "bigyellow": {
+                        "25": 37.8,
+                        "50": 59.4,
+                        "75": 80.7,
+                        "100": 101.7,
+                        "150": 190.5
+                    }
+                }
             }
         ],
         "priceChanges": [
@@ -6362,6 +6405,41 @@ const SITES = {
                 "size": 150,
                 "oldPrice": 168.54,
                 "newPrice": 210.67
+            },
+            {
+                "date": "2026-07-13",
+                "provider": "access",
+                "size": 25,
+                "oldPrice": 99,
+                "newPrice": 56.31
+            },
+            {
+                "date": "2026-07-13",
+                "provider": "access",
+                "size": 50,
+                "oldPrice": 37.5,
+                "newPrice": 66.69
+            },
+            {
+                "date": "2026-07-13",
+                "provider": "access",
+                "size": 100,
+                "oldPrice": 137.77,
+                "newPrice": 135.23
+            },
+            {
+                "date": "2026-07-13",
+                "provider": "access",
+                "size": 150,
+                "oldPrice": 221.77,
+                "newPrice": 220.15
+            },
+            {
+                "date": "2026-07-13",
+                "provider": "urban",
+                "size": 100,
+                "oldPrice": 127.79,
+                "newPrice": 120.27
             }
         ],
         "dealsHistory": [
@@ -6376,7 +6454,7 @@ const SITES = {
                 "provider": "access",
                 "text": "50% off up to 13 weeks storage",
                 "firstSeen": "2026-01-15",
-                "lastSeen": "2026-07-12",
+                "lastSeen": "2026-07-13",
                 "active": true
             },
             {
@@ -6439,7 +6517,7 @@ const SITES = {
                 "provider": "urban",
                 "text": "50% off your first two months",
                 "firstSeen": "2026-03-14",
-                "lastSeen": "2026-07-12",
+                "lastSeen": "2026-07-13",
                 "active": true
             },
             {
@@ -6495,14 +6573,14 @@ const SITES = {
                 "provider": "safestore",
                 "text": "50% Off 8 Weeks",
                 "firstSeen": "2026-06-27",
-                "lastSeen": "2026-07-12",
+                "lastSeen": "2026-07-13",
                 "active": true
             },
             {
                 "provider": "metro",
                 "text": "50% off 8 weeks",
                 "firstSeen": "2026-06-30",
-                "lastSeen": "2026-07-12",
+                "lastSeen": "2026-07-13",
                 "active": true
             }
         ],
@@ -6514,16 +6592,16 @@ const SITES = {
                 "message": "Internal price sheet"
             },
             "access": {
-                "status": "partial",
-                "lastSuccess": "2026-07-06",
+                "status": "ok",
+                "lastSuccess": "2026-07-13",
                 "pricesFound": 5,
-                "message": "Using cached prices - no new data today"
+                "message": "Sources: quote-form:4 (5/5 sizes)"
             },
             "urban": {
-                "status": "partial",
-                "lastSuccess": "2026-07-06",
+                "status": "ok",
+                "lastSuccess": "2026-07-13",
                 "pricesFound": 8,
-                "message": "Using cached prices - no new data today"
+                "message": "Sources: quote-form:8 (8/5 sizes)"
             },
             "safestore": {
                 "status": "partial",
@@ -7474,7 +7552,7 @@ loadSite(DEFAULT_SITE);
 
 // Metadata
 const DATA_META = {
-    "lastScraped": "2026-07-12T09:27:17.056Z",
+    "lastScraped": "2026-07-13T11:01:32.363Z",
     "scraperVersion": "5.0.0",
     "location": "Multi-site (Islington, Bayswater, Victoria/Pimlico)",
     "note": "Multi-site. Scraper rebuilds Islington's scraped blocks; per-site INSURANCE/ADMIN_FEES + non-Islington sites are manually maintained and preserved."
