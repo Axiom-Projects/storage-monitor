@@ -6,3 +6,5 @@ scraper/email-creds.json
 scraper/local-scrape.log
 scraper/launchd.out.log
 scraper/launchd.err.log
+
+scraper/.imessage-to
