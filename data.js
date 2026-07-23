@@ -78,18 +78,18 @@ const SITES = {
                 "150": 210.67
             },
             "safestore": {
-                "25": 51.49,
-                "50": 91.99,
-                "75": 125.49,
-                "100": 120.49,
-                "150": 258.99
+                "25": 65.99,
+                "50": 91.49,
+                "75": 141.49,
+                "100": 109.49,
+                "150": 181.49
             },
             "bigyellow": {
-                "25": 37.8,
-                "50": 59.4,
-                "75": 80.7,
-                "100": 101.7,
-                "150": 190.5
+                "25": 39.3,
+                "50": 57.9,
+                "75": 95.7,
+                "100": 105.9,
+                "150": 176.1
             }
         },
         "currentDeals": {
@@ -131,7 +131,7 @@ const SITES = {
                 "discountPct": 50,
                 "maxWeeks": 8,
                 "firstSeen": "2026-03-14",
-                "lastSeen": "2026-03-14"
+                "lastSeen": "2026-07-23"
             }
         },
         "priceHistory": [
@@ -6147,18 +6147,18 @@ const SITES = {
                         "150": 210.67
                     },
                     "safestore": {
-                        "25": 51.49,
-                        "50": 91.99,
-                        "75": 125.49,
-                        "100": 120.49,
-                        "150": 258.99
+                        "25": 65.99,
+                        "50": 91.49,
+                        "75": 141.49,
+                        "100": 109.49,
+                        "150": 181.49
                     },
                     "bigyellow": {
-                        "25": 37.8,
-                        "50": 59.4,
-                        "75": 80.7,
-                        "100": 101.7,
-                        "150": 190.5
+                        "25": 39.3,
+                        "50": 57.9,
+                        "75": 95.7,
+                        "100": 105.9,
+                        "150": 176.1
                     }
                 }
             }
@@ -7069,16 +7069,16 @@ const SITES = {
                 "message": "Using cached prices - no new data today"
             },
             "safestore": {
-                "status": "partial",
-                "lastSuccess": "2026-03-14",
+                "status": "ok",
+                "lastSuccess": "2026-07-23",
                 "pricesFound": 5,
-                "message": "Using cached prices - no new data today"
+                "message": "Real online quote (weekly, inc VAT) via headed Chrome — clears reCAPTCHA v3"
             },
             "bigyellow": {
-                "status": "partial",
-                "lastSuccess": "2026-03-14",
+                "status": "ok",
+                "lastSuccess": "2026-07-23",
                 "pricesFound": 5,
-                "message": "Using cached prices - no new data today"
+                "message": "Real quote (ongoing wk rate after standing discount) via headed Chrome — clears Incapsula"
             }
         },
         "insurance": {
