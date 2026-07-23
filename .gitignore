@@ -3,3 +3,6 @@ scraper/node_modules/
 .DS_Store
 screenshots/
 scraper/email-creds.json
+scraper/local-scrape.log
+scraper/launchd.out.log
+scraper/launchd.err.log

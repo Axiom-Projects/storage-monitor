@@ -22,12 +22,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Check if Monday (quote day)
+      # Quote day is now explicit, not day-of-week. Scheduled runs stay daily-only
+      # (deals/aggregator); the weekly headed quote run happens on Sam's Mac. Only a
+      # manual dispatch with include_quotes=true runs the (headless) email-quote path here.
+      - name: Determine quote mode
         id: check-day
         run: |
-          DAY=$(date +%u)
-          echo "Day of week: $DAY (1=Monday)"
-          if { [ "${{ github.event_name }}" = "schedule" ] && [ "$DAY" = "1" ]; } || [ "${{ inputs.include_quotes }}" = "true" ]; then
+          if [ "${{ inputs.include_quotes }}" = "true" ]; then
             echo "is_monday=true" >> $GITHUB_OUTPUT
           else
             echo "is_monday=false" >> $GITHUB_OUTPUT
@@ -49,6 +50,10 @@ jobs:
           npx playwright install chromium --with-deps
 
       - name: Run scraper
+        env:
+          # Actions can't run headed Chrome, so Safestore/Big Yellow stay cached here.
+          # FORCE_QUOTES only enables the headless email-quote path on manual include_quotes.
+          FORCE_QUOTES: ${{ steps.check-day.outputs.is_monday == 'true' && '1' || '0' }}
         run: |
           cd scraper
           node scrape.js

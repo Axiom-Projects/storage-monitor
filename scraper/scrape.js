@@ -36,8 +36,10 @@ function getWeeklyIdentity() {
 }
 
 function isQuoteDay() {
-    const day = new Date().getDay(); // 0=Sun, 1=Mon
-    return day === 1; // Only submit quote forms on Mondays
+    // Quote forms (incl. the headed-Chrome Safestore/Big Yellow flows) run only when
+    // explicitly asked: FORCE_QUOTES=1. The weekly headed run on the Mac sets this;
+    // scheduled GitHub Actions runs leave it unset and stay daily-only (deals/aggregator).
+    return process.env.FORCE_QUOTES === "1";
 }
 
 // ============================================================
@@ -471,25 +473,33 @@ async function scrapeBigYellowDirect(browser, identity) {
             await page.evaluate(() => document.querySelector("button.btn-primary.btn-block")?.click());
             await page.waitForTimeout(6000);
 
-            // Step 3: Storage details
+            // Step 3: Storage details.
+            // The site redesigned this step; the old `selectpicker('val', …)` no longer
+            // sets the underlying native <select>, so the REQUIRED "Reason for storage"
+            // stayed empty and validation blocked the flow. Set the native value + fire
+            // `change`, then refresh the Bootstrap selectpicker UI. (WNS1 = within a week.)
             await page.waitForFunction(() => typeof $ !== "undefined" && typeof $.fn.selectpicker !== "undefined", { timeout: 10000 }).catch(() => {});
 
             await page.evaluate(() => {
-                if (typeof $ !== "undefined" && $.fn.selectpicker) {
-                    $('[name="enquiry_type"][value="domestic"]').prop('checked', true);
-                    $('#enquiry_reason').selectpicker('val', 'Moving');
-                    $('#whenNeedStorage').selectpicker('val', 'WNS2');
-                } else {
-                    const r = document.querySelector('#enquiry_reason');
-                    if (r) { r.value = 'Moving'; r.dispatchEvent(new Event('change', {bubbles:true})); }
-                    const w = document.querySelector('#whenNeedStorage');
-                    if (w) { w.value = 'WNS2'; w.dispatchEvent(new Event('change', {bubbles:true})); }
-                }
+                const setSel = (id, val) => {
+                    const s = document.getElementById(id);
+                    if (!s) return;
+                    s.value = val;
+                    s.dispatchEvent(new Event("change", { bubbles: true }));
+                };
+                const home = document.getElementById("input_type_home");
+                if (home) home.checked = true;
+                setSel("enquiry_reason", "Moving");     // REQUIRED — the field that blocked us
+                setSel("whenNeedStorage", "WNS1");
+                if (window.jQuery && jQuery.fn.selectpicker) jQuery(".selectpicker").selectpicker("refresh");
             });
             await page.waitForTimeout(1000);
 
+            // Advance: click the real submit button (SPA handler); fall back to form.submit().
             const nav3 = page.waitForNavigation({ timeout: 15000 }).catch(() => null);
-            await page.evaluate(() => document.querySelector("#form_main")?.submit());
+            await page.click('button[type="submit"]', { timeout: 5000 }).catch(async () => {
+                await page.evaluate(() => document.querySelector("#form_main")?.submit());
+            });
             await nav3;
             await page.waitForTimeout(3000);
 
@@ -866,20 +876,47 @@ async function main() {
         Object.defineProperty(navigator, "webdriver", { get: () => false });
     });
 
+    // --- Headed real Chrome for the anti-bot-gated sites (Safestore reCAPTCHA v3,
+    // Big Yellow Incapsula). These only pass from a HEADED browser — being headless is
+    // the dominant negative signal, confirmed even over a VPN. Enable with HEADED=1
+    // (the weekly Mac run). Without it we keep the previous cached prices for these two.
+    const HEADED = process.env.HEADED === "1";
+    let hardBrowser = browser;
+    if (HEADED) {
+        for (let attempt = 1; attempt <= 3; attempt++) {
+            try {
+                hardBrowser = await chromium.launch({
+                    headless: false,
+                    channel: "chrome",
+                    args: ["--disable-blink-features=AutomationControlled"]
+                });
+                console.log("  Headed Chrome launched for gated sites (Safestore, Big Yellow)");
+                break;
+            } catch (e) {
+                console.log(`  Headed Chrome launch attempt ${attempt}/3 failed: ${e.message}`);
+                if (attempt === 3) console.log("  Falling back to headless — Safestore/Big Yellow will keep cached prices");
+            }
+        }
+    }
+
     // --- DAILY: Aggregator prices ---
     const aggregatorPrices = await scrapeStorageLocator(context);
 
     // --- DAILY: Deals from competitor sites ---
     const dailyDeals = await scrapeDailyDeals(context);
 
-    // --- DAILY: Big Yellow direct quote flow (no contact details needed to see prices) ---
+    // --- Big Yellow direct quote flow (headed only — headless is blocked by Incapsula) ---
     let bigYellowPrices = {};
-    try {
-        console.log("\n--- Big Yellow quote flow (daily) ---");
-        bigYellowPrices = await scrapeBigYellowDirect(browser, getWeeklyIdentity());
-        console.log(`  Big Yellow prices: ${JSON.stringify(bigYellowPrices)}`);
-    } catch (err) {
-        console.log(`  Big Yellow daily flow error: ${err.message}`);
+    if (HEADED) {
+        try {
+            console.log("\n--- Big Yellow quote flow (headed) ---");
+            bigYellowPrices = await scrapeBigYellowDirect(hardBrowser, getWeeklyIdentity());
+            console.log(`  Big Yellow prices: ${JSON.stringify(bigYellowPrices)}`);
+        } catch (err) {
+            console.log(`  Big Yellow flow error: ${err.message}`);
+        }
+    } else {
+        console.log("\n--- Big Yellow skipped (needs HEADED=1); keeping cached prices ---");
     }
 
     // --- WEEKLY: Submit quote forms + check emails ---
@@ -893,7 +930,9 @@ async function main() {
         const tempEmail = await createTempEmail();
 
         if (tempEmail) {
-            quotePrices = await submitQuoteForms(context, tempEmail.address, identity, browser);
+            // Pass hardBrowser (headed when HEADED=1) so the Safestore reCAPTCHA-v3 wizard
+            // runs headed and clears scoring; access/urban use the headless `context`.
+            quotePrices = await submitQuoteForms(context, tempEmail.address, identity, hardBrowser);
 
             // Wait 10 minutes for immediate auto-reply emails
             console.log("\n--- Waiting 10 minutes for quote emails ---");
@@ -919,6 +958,7 @@ async function main() {
     }
 
     await browser.close();
+    if (hardBrowser !== browser) await hardBrowser.close().catch(() => {});
 
     // --- Merge all price sources (email > quote form > Big Yellow direct > aggregator > existing) ---
     const mergedPrices = {};
