@@ -33,6 +33,7 @@
             </div>
             <div class="header-right">
                 <span id="ov-updated" class="last-updated"></span>
+                <button id="ov-update-btn" class="btn-update" title="Run the price scraper now (takes ~20 min)">Update prices</button>
                 <button id="ov-logout-btn" class="btn-logout">Lock</button>
             </div>
         </header>
@@ -71,6 +72,7 @@
             </div>
             <div class="header-right">
                 <span id="last-updated" class="last-updated"></span>
+                <button id="update-btn" class="btn-update" title="Run the price scraper now (takes ~20 min)">Update prices</button>
                 <button id="logout-btn" class="btn-logout">Lock</button>
             </div>
         </header>
@@ -291,6 +293,30 @@
             <p>Storage Monitor &mdash; Islington Competitive Intelligence<br>
             Deals scraped daily &middot; Quote forms submitted weekly (Mon) &middot; Prices via StorageLocator + email quotes</p>
         </footer>
+    </div>
+
+    <!-- Update-button token setup (shown once per browser) -->
+    <div id="update-modal" class="modal-overlay" style="display:none">
+        <div class="modal-box">
+            <h2>Set up the update button</h2>
+            <p>The update button starts the price scraper on GitHub. To let this browser trigger it,
+            paste a GitHub access token below &mdash; a one-time setup, saved only on this device.</p>
+            <ol>
+                <li>Open <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">github.com &rarr; create fine-grained token</a></li>
+                <li>Resource owner: <strong>Axiom-Projects</strong> &middot; Repository access: <strong>only storage-monitor</strong></li>
+                <li>Repository permissions: <strong>Actions &rarr; Read and write</strong> (nothing else)</li>
+                <li>Generate, copy, and paste it here</li>
+            </ol>
+            <p class="modal-note">If your org doesn't allow fine-grained tokens, a
+            <a href="https://github.com/settings/tokens/new?scopes=repo&description=Storage%20Monitor%20update%20button" target="_blank" rel="noopener">classic token</a>
+            with the <strong>repo</strong> scope also works.</p>
+            <input type="password" id="gh-token-input" placeholder="github_pat_... or ghp_..." autocomplete="off">
+            <p id="update-modal-error" class="modal-error" style="display:none"></p>
+            <div class="modal-actions">
+                <button id="gh-token-cancel" class="btn-logout">Cancel</button>
+                <button id="gh-token-save" class="btn-primary">Save &amp; start update</button>
+            </div>
+        </div>
     </div>
 
     <script src="data.js"></script>

@@ -4,7 +4,12 @@ on:
   schedule:
     # Daily at 7am UK time - aggregator + deals scraping
     - cron: '0 7 * * *'
-  workflow_dispatch: # Allow manual trigger
+  workflow_dispatch: # Manual trigger (dashboard update button / gh workflow run)
+    inputs:
+      include_quotes:
+        description: 'Also run the email-quote follow-up jobs (adds ~3h)'
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -22,7 +27,7 @@ jobs:
         run: |
           DAY=$(date +%u)
           echo "Day of week: $DAY (1=Monday)"
-          if [ "$DAY" = "1" ] || [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+          if { [ "${{ github.event_name }}" = "schedule" ] && [ "$DAY" = "1" ]; } || [ "${{ inputs.include_quotes }}" = "true" ]; then
             echo "is_monday=true" >> $GITHUB_OUTPUT
           else
             echo "is_monday=false" >> $GITHUB_OUTPUT

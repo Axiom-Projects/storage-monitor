@@ -31,6 +31,7 @@
         setupSizeButtons();
         setupTimeButtons();
         setupOverviewSizeButtons();
+        setupUpdater();
         if (sessionStorage.getItem(SESSION_KEY) === "1") showApp();
     }
 
@@ -930,6 +931,218 @@
                 <div class="ov-cta">View site detail &rarr;</div>
             </div>`;
         }).join("");
+    }
+
+    // --- Update button (triggers the GitHub Actions scraper) ---
+    const GH_OWNER = "Axiom-Projects";
+    const GH_REPO = "storage-monitor";
+    const GH_WORKFLOW = "scrape.yml";
+    const GH_API = `https://api.github.com/repos/${GH_OWNER}/${GH_REPO}`;
+    const TOKEN_KEY = "storage_monitor_gh_token";
+    const RUN_KEY = "storage_monitor_update_run";   // {startedAt, runId?} while an update is in flight
+    let updateTimer = null;
+
+    function getToken() { return localStorage.getItem(TOKEN_KEY) || ""; }
+
+    function ghFetch(path, opts = {}) {
+        return fetch(GH_API + path, {
+            ...opts,
+            headers: {
+                "Authorization": "Bearer " + getToken(),
+                "Accept": "application/vnd.github+json",
+                ...(opts.headers || {})
+            }
+        });
+    }
+
+    function getPendingRun() {
+        try { return JSON.parse(localStorage.getItem(RUN_KEY)); } catch { return null; }
+    }
+
+    function setUpdateUI(state, label) {
+        ["update-btn", "ov-update-btn"].forEach(id => {
+            const btn = document.getElementById(id);
+            if (!btn) return;
+            btn.classList.remove("updating", "update-error");
+            if (state === "updating") {
+                btn.classList.add("updating");
+                btn.disabled = true;
+                btn.textContent = label;
+            } else if (state === "error") {
+                btn.classList.add("update-error");
+                btn.disabled = false;
+                btn.textContent = "Update failed - retry";
+                btn.title = label || "The scrape run failed. Click to try again.";
+            } else {
+                btn.disabled = false;
+                btn.textContent = "Update prices";
+                btn.title = "Run the price scraper now (takes ~20 min)";
+            }
+        });
+    }
+
+    function elapsedLabel(startedAt) {
+        const mins = Math.max(0, Math.round((Date.now() - new Date(startedAt)) / 60000));
+        return `Updating… ${mins} min`;
+    }
+
+    function updateFailed(message) {
+        localStorage.removeItem(RUN_KEY);
+        clearTimeout(updateTimer);
+        setUpdateUI("error", message);
+    }
+
+    function setupUpdater() {
+        ["update-btn", "ov-update-btn"].forEach(id => {
+            const btn = document.getElementById(id);
+            if (btn) btn.addEventListener("click", handleUpdateClick);
+        });
+
+        const modal = document.getElementById("update-modal");
+        document.getElementById("gh-token-cancel").addEventListener("click", () => {
+            modal.style.display = "none";
+        });
+        document.getElementById("gh-token-save").addEventListener("click", saveTokenAndStart);
+        document.getElementById("gh-token-input").addEventListener("keydown", e => {
+            if (e.key === "Enter") saveTokenAndStart();
+        });
+
+        // An update kicked off earlier (possibly before a page reload) - resume watching it.
+        const pending = getPendingRun();
+        if (pending && Date.now() - new Date(pending.startedAt) < 2 * 3600000) {
+            setUpdateUI("updating", elapsedLabel(pending.startedAt));
+            watchUpdate(pending);
+        } else if (pending) {
+            localStorage.removeItem(RUN_KEY);
+        }
+    }
+
+    function handleUpdateClick() {
+        if (getPendingRun()) return;
+        if (!getToken()) {
+            openTokenModal("");
+        } else {
+            startUpdate();
+        }
+    }
+
+    function openTokenModal(errorMsg) {
+        const err = document.getElementById("update-modal-error");
+        err.textContent = errorMsg;
+        err.style.display = errorMsg ? "block" : "none";
+        document.getElementById("update-modal").style.display = "flex";
+        document.getElementById("gh-token-input").focus();
+    }
+
+    async function saveTokenAndStart() {
+        const input = document.getElementById("gh-token-input");
+        const token = input.value.trim();
+        if (!token) return;
+        localStorage.setItem(TOKEN_KEY, token);
+        // Validate before accepting: can this token see the workflow?
+        try {
+            const res = await ghFetch(`/actions/workflows/${GH_WORKFLOW}`);
+            if (!res.ok) {
+                localStorage.removeItem(TOKEN_KEY);
+                openTokenModal(res.status === 401
+                    ? "GitHub rejected that token. Check it was copied in full."
+                    : `Token can't access the workflow (HTTP ${res.status}). Check the repository and Actions permissions.`);
+                return;
+            }
+        } catch (e) {
+            localStorage.removeItem(TOKEN_KEY);
+            openTokenModal("Couldn't reach GitHub - check your connection and try again.");
+            return;
+        }
+        input.value = "";
+        document.getElementById("update-modal").style.display = "none";
+        startUpdate();
+    }
+
+    async function startUpdate() {
+        setUpdateUI("updating", "Starting…");
+        let res;
+        try {
+            res = await ghFetch(`/actions/workflows/${GH_WORKFLOW}/dispatches`, {
+                method: "POST",
+                body: JSON.stringify({ ref: "main" })
+            });
+        } catch (e) {
+            setUpdateUI("error", "Couldn't reach GitHub - check your connection.");
+            return;
+        }
+        if (res.status === 401 || res.status === 403 || res.status === 404) {
+            localStorage.removeItem(TOKEN_KEY);
+            setUpdateUI("idle");
+            openTokenModal("GitHub rejected the saved token (it may have expired or lack Actions write access). Paste a new one.");
+            return;
+        }
+        if (!res.ok) {
+            setUpdateUI("error", `GitHub returned HTTP ${res.status} when starting the scrape.`);
+            return;
+        }
+        const pending = { startedAt: new Date().toISOString() };
+        localStorage.setItem(RUN_KEY, JSON.stringify(pending));
+        setUpdateUI("updating", elapsedLabel(pending.startedAt));
+        watchUpdate(pending);
+    }
+
+    // Poll the run until it finishes, then poll data.js until GitHub Pages serves the
+    // new data, then reload. State lives in localStorage so a page reload resumes it.
+    function watchUpdate(pending) {
+        const baseline = (typeof DATA_META !== "undefined" && DATA_META.lastScraped) || "";
+        const deadline = new Date(pending.startedAt).getTime() + 2 * 3600000;
+
+        async function tick() {
+            if (Date.now() > deadline) {
+                updateFailed("The update didn't finish within 2 hours - check the Actions tab on GitHub.");
+                return;
+            }
+            try {
+                if (!pending.runId) {
+                    // Dispatch returns no run id; find the run it created.
+                    const res = await ghFetch(`/actions/workflows/${GH_WORKFLOW}/runs?event=workflow_dispatch&per_page=5`);
+                    if (res.ok) {
+                        const cutoff = new Date(pending.startedAt).getTime() - 60000;
+                        const run = (await res.json()).workflow_runs
+                            .find(r => new Date(r.created_at).getTime() >= cutoff);
+                        if (run) {
+                            pending.runId = run.id;
+                            localStorage.setItem(RUN_KEY, JSON.stringify(pending));
+                        }
+                    }
+                } else if (!pending.runDone) {
+                    const res = await ghFetch(`/actions/runs/${pending.runId}`);
+                    if (res.ok) {
+                        const run = await res.json();
+                        if (run.status === "completed") {
+                            if (run.conclusion !== "success") {
+                                updateFailed(`The scrape run ${run.conclusion} - check the Actions tab on GitHub.`);
+                                return;
+                            }
+                            pending.runDone = true;
+                            localStorage.setItem(RUN_KEY, JSON.stringify(pending));
+                        }
+                    }
+                } else {
+                    // Run succeeded; wait for Pages to serve the freshly committed data.js.
+                    // cache:"reload" also refreshes the HTTP cache so the reload below picks it up.
+                    const res = await fetch("data.js", { cache: "reload" });
+                    if (res.ok) {
+                        const dates = [...(await res.text()).matchAll(/"lastScraped":\s*"([^"]+)"/g)].map(m => m[1]);
+                        const newest = dates.sort().pop() || "";
+                        if (newest > baseline) {
+                            localStorage.removeItem(RUN_KEY);
+                            location.reload();
+                            return;
+                        }
+                    }
+                }
+            } catch (e) { /* transient network error - keep polling */ }
+            setUpdateUI("updating", elapsedLabel(pending.startedAt));
+            updateTimer = setTimeout(tick, 30000);
+        }
+        tick();
     }
 
     // --- Helpers ---
