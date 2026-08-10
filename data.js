@@ -69,13 +69,13 @@ const SITES = {
             },
             "urban": {
                 "10": 25.73,
-                "25": 60.83,
+                "25": 57.93,
                 "35": 53.37,
-                "50": 66.13,
+                "50": 70.55,
                 "75": 88.39,
                 "100": 112.76,
-                "125": 170.45,
-                "150": 210.67
+                "125": 127.83,
+                "150": 158
             },
             "safestore": {
                 "25": 72.49,
@@ -131,7 +131,7 @@ const SITES = {
                 "discountPct": 50,
                 "maxWeeks": 8,
                 "firstSeen": "2026-07-27",
-                "lastSeen": "2026-07-28"
+                "lastSeen": "2026-08-10"
             }
         },
         "priceHistory": [
@@ -6912,13 +6912,13 @@ const SITES = {
                     },
                     "urban": {
                         "10": 25.73,
-                        "25": 60.83,
+                        "25": 57.93,
                         "35": 53.37,
-                        "50": 66.13,
+                        "50": 70.55,
                         "75": 88.39,
                         "100": 112.76,
-                        "125": 170.45,
-                        "150": 210.67
+                        "125": 127.83,
+                        "150": 158
                     },
                     "safestore": {
                         "25": 72.49,
@@ -7770,6 +7770,34 @@ const SITES = {
                 "size": 150,
                 "oldPrice": 198,
                 "newPrice": 219.9
+            },
+            {
+                "date": "2026-08-10",
+                "provider": "urban",
+                "size": 25,
+                "oldPrice": 60.83,
+                "newPrice": 57.93
+            },
+            {
+                "date": "2026-08-10",
+                "provider": "urban",
+                "size": 50,
+                "oldPrice": 66.13,
+                "newPrice": 70.55
+            },
+            {
+                "date": "2026-08-10",
+                "provider": "urban",
+                "size": 125,
+                "oldPrice": 170.45,
+                "newPrice": 127.83
+            },
+            {
+                "date": "2026-08-10",
+                "provider": "urban",
+                "size": 150,
+                "oldPrice": 210.67,
+                "newPrice": 158
             }
         ],
         "dealsHistory": [
@@ -7917,7 +7945,7 @@ const SITES = {
                 "provider": "bigyellow",
                 "text": "50% off for up to 8 weeks",
                 "firstSeen": "2026-07-27",
-                "lastSeen": "2026-07-28",
+                "lastSeen": "2026-08-10",
                 "active": true
             }
         ],
@@ -7935,16 +7963,16 @@ const SITES = {
                 "message": "Using cached prices - no new data today"
             },
             "urban": {
-                "status": "partial",
-                "lastSuccess": "2026-07-28",
+                "status": "ok",
+                "lastSuccess": "2026-08-10",
                 "pricesFound": 8,
-                "message": "Using cached prices - no new data today"
+                "message": "Sources: quote-form:7 (8/5 sizes)"
             },
             "safestore": {
-                "status": "partial",
-                "lastSuccess": "2026-07-28",
+                "status": "ok",
+                "lastSuccess": "2026-08-10",
                 "pricesFound": 5,
-                "message": "Using cached prices - no new data today"
+                "message": "Sources: quote-form:5 (5/5 sizes)"
             },
             "bigyellow": {
                 "status": "partial",
@@ -8889,7 +8917,7 @@ loadSite(DEFAULT_SITE);
 
 // Metadata
 const DATA_META = {
-    "lastScraped": "2026-08-10T08:41:47.282Z",
+    "lastScraped": "2026-08-10T09:11:18.213Z",
     "scraperVersion": "5.0.0",
     "location": "Multi-site (Islington, Bayswater, Victoria/Pimlico)",
     "note": "Multi-site. Scraper rebuilds Islington's scraped blocks; per-site INSURANCE/ADMIN_FEES + non-Islington sites are manually maintained and preserved."
