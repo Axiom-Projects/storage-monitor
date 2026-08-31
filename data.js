@@ -8929,10 +8929,10 @@ const SITES = {
                 "message": "Internal price sheet"
             },
             "access": {
-                "status": "ok",
+                "status": "partial",
                 "lastSuccess": "2026-08-31",
                 "pricesFound": 5,
-                "message": "Sources: quote-form:5 (5/5 sizes)"
+                "message": "Using cached prices - no new data today"
             },
             "urban": {
                 "status": "partial",
@@ -8941,10 +8941,10 @@ const SITES = {
                 "message": "Using cached prices - no new data today"
             },
             "safestore": {
-                "status": "ok",
+                "status": "partial",
                 "lastSuccess": "2026-08-31",
                 "pricesFound": 5,
-                "message": "Sources: quote-form:5 (5/5 sizes)"
+                "message": "Using cached prices - no new data today"
             },
             "bigyellow": {
                 "status": "partial",
@@ -9889,7 +9889,7 @@ loadSite(DEFAULT_SITE);
 
 // Metadata
 const DATA_META = {
-    "lastScraped": "2026-08-31T09:10:34.476Z",
+    "lastScraped": "2026-08-31T14:56:54.663Z",
     "scraperVersion": "5.0.0",
     "location": "Multi-site (Islington, Bayswater, Victoria/Pimlico)",
     "note": "Multi-site. Scraper rebuilds Islington's scraped blocks; per-site INSURANCE/ADMIN_FEES + non-Islington sites are manually maintained and preserved."
