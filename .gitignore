@@ -8,3 +8,5 @@ scraper/launchd.out.log
 scraper/launchd.err.log
 
 scraper/.imessage-to
+scraper/chrome-runs/
+scraper/chrome-weekly.log

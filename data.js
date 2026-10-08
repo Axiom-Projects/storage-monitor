@@ -61,11 +61,11 @@ const SITES = {
                 "150": 188.75
             },
             "access": {
-                "25": 57.23,
-                "50": 82.38,
-                "75": 108.92,
-                "100": 134.08,
-                "150": 224.31
+                "25": 57.92,
+                "50": 83.08,
+                "75": 122.77,
+                "100": 133.85,
+                "150": 220.85
             },
             "urban": {
                 "10": 25.73,
@@ -103,10 +103,10 @@ const SITES = {
             },
             "access": {
                 "active": true,
-                "text": "50% off up to 8 weeks storage",
+                "text": "50% off your first 8 weeks storage",
                 "discountPct": 50,
                 "maxWeeks": 8,
-                "firstSeen": "2026-04-02",
+                "firstSeen": "2026-10-08",
                 "lastSeen": "2026-10-08"
             },
             "urban": {
@@ -128,7 +128,7 @@ const SITES = {
             "bigyellow": {
                 "active": true,
                 "text": "Half price for the first 8 weeks",
-                "discountPct": 50,
+                "discountPct": 0,
                 "maxWeeks": 8,
                 "firstSeen": "2026-10-08",
                 "lastSeen": "2026-10-08"
@@ -9398,11 +9398,11 @@ const SITES = {
                         "150": 188.75
                     },
                     "access": {
-                        "25": 57.23,
-                        "50": 82.38,
-                        "75": 108.92,
-                        "100": 134.08,
-                        "150": 224.31
+                        "25": 57.92,
+                        "50": 83.08,
+                        "75": 122.77,
+                        "100": 133.85,
+                        "150": 220.85
                     },
                     "urban": {
                         "10": 25.73,
@@ -10467,6 +10467,41 @@ const SITES = {
                 "size": 150,
                 "oldPrice": 219.9,
                 "newPrice": 176.1
+            },
+            {
+                "date": "2026-10-08",
+                "provider": "access",
+                "size": 25,
+                "oldPrice": 57.23,
+                "newPrice": 57.92
+            },
+            {
+                "date": "2026-10-08",
+                "provider": "access",
+                "size": 50,
+                "oldPrice": 82.38,
+                "newPrice": 83.08
+            },
+            {
+                "date": "2026-10-08",
+                "provider": "access",
+                "size": 75,
+                "oldPrice": 108.92,
+                "newPrice": 122.77
+            },
+            {
+                "date": "2026-10-08",
+                "provider": "access",
+                "size": 100,
+                "oldPrice": 134.08,
+                "newPrice": 133.85
+            },
+            {
+                "date": "2026-10-08",
+                "provider": "access",
+                "size": 150,
+                "oldPrice": 224.31,
+                "newPrice": 220.85
             }
         ],
         "dealsHistory": [
@@ -10630,6 +10665,13 @@ const SITES = {
                 "firstSeen": "2026-10-08",
                 "lastSeen": "2026-10-08",
                 "active": true
+            },
+            {
+                "provider": "access",
+                "text": "50% off your first 8 weeks storage",
+                "firstSeen": "2026-10-08",
+                "lastSeen": "2026-10-08",
+                "active": true
             }
         ],
         "scrapeStatus": {
@@ -10640,10 +10682,10 @@ const SITES = {
                 "message": "Internal price sheet"
             },
             "access": {
-                "status": "partial",
-                "lastSuccess": "2026-08-31",
+                "status": "ok",
+                "lastSuccess": "2026-10-08",
                 "pricesFound": 5,
-                "message": "Using cached prices - no new data today"
+                "message": "Weekly real-Chrome check (5/5 sizes)"
             },
             "urban": {
                 "status": "partial",
@@ -10655,13 +10697,13 @@ const SITES = {
                 "status": "ok",
                 "lastSuccess": "2026-10-08",
                 "pricesFound": 5,
-                "message": "Manual check in real Chrome (automated browsers blocked: Big Yellow hCaptcha / Safestore reCAPTCHA) - 5/5 sizes"
+                "message": "Weekly real-Chrome check (5/5 sizes)"
             },
             "bigyellow": {
                 "status": "ok",
                 "lastSuccess": "2026-10-08",
                 "pricesFound": 5,
-                "message": "Manual check in real Chrome (automated browsers blocked: Big Yellow hCaptcha / Safestore reCAPTCHA) - 5/5 sizes"
+                "message": "Weekly real-Chrome check (5/5 sizes)"
             }
         },
         "insurance": {
