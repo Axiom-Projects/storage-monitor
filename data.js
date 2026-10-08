@@ -95,18 +95,18 @@ const SITES = {
         "currentDeals": {
             "metro": {
                 "active": true,
-                "text": "50% off 8 weeks",
+                "text": "50% off up to 8 weeks",
                 "discountPct": 50,
                 "maxWeeks": 8,
-                "firstSeen": "2026-06-30",
+                "firstSeen": "2026-10-08",
                 "lastSeen": "2026-10-08"
             },
             "access": {
                 "active": true,
-                "text": "50% off your first 8 weeks storage",
+                "text": "50% off up to 8 weeks storage",
                 "discountPct": 50,
                 "maxWeeks": 8,
-                "firstSeen": "2026-10-08",
+                "firstSeen": "2026-04-02",
                 "lastSeen": "2026-10-08"
             },
             "urban": {
@@ -119,10 +119,10 @@ const SITES = {
             },
             "safestore": {
                 "active": true,
-                "text": "50% off first 8 weeks (100 sq ft: £1 first month)",
+                "text": "50% Off 8 Weeks",
                 "discountPct": 50,
                 "maxWeeks": 8,
-                "firstSeen": "2026-10-08",
+                "firstSeen": "2026-06-27",
                 "lastSeen": "2026-10-08"
             },
             "bigyellow": {
@@ -10672,6 +10672,13 @@ const SITES = {
                 "firstSeen": "2026-10-08",
                 "lastSeen": "2026-10-08",
                 "active": true
+            },
+            {
+                "provider": "metro",
+                "text": "50% off up to 8 weeks",
+                "firstSeen": "2026-10-08",
+                "lastSeen": "2026-10-08",
+                "active": true
             }
         ],
         "scrapeStatus": {
@@ -10682,10 +10689,10 @@ const SITES = {
                 "message": "Internal price sheet"
             },
             "access": {
-                "status": "ok",
+                "status": "partial",
                 "lastSuccess": "2026-10-08",
                 "pricesFound": 5,
-                "message": "Weekly real-Chrome check (5/5 sizes)"
+                "message": "Using cached prices - no new data today"
             },
             "urban": {
                 "status": "partial",
@@ -10694,16 +10701,16 @@ const SITES = {
                 "message": "Using cached prices - no new data today"
             },
             "safestore": {
-                "status": "ok",
+                "status": "partial",
                 "lastSuccess": "2026-10-08",
                 "pricesFound": 5,
-                "message": "Weekly real-Chrome check (5/5 sizes)"
+                "message": "Using cached prices - no new data today"
             },
             "bigyellow": {
-                "status": "ok",
+                "status": "partial",
                 "lastSuccess": "2026-10-08",
                 "pricesFound": 5,
-                "message": "Weekly real-Chrome check (5/5 sizes)"
+                "message": "Using cached prices - no new data today"
             }
         },
         "insurance": {
@@ -11642,7 +11649,7 @@ loadSite(DEFAULT_SITE);
 
 // Metadata
 const DATA_META = {
-    "lastScraped": "2026-10-08T11:40:07.896Z",
+    "lastScraped": "2026-10-08T14:27:58.305Z",
     "scraperVersion": "5.0.0",
     "location": "Multi-site (Islington, Bayswater, Victoria/Pimlico)",
     "note": "Multi-site. Scraper rebuilds Islington's scraped blocks; per-site INSURANCE/ADMIN_FEES + non-Islington sites are manually maintained and preserved."
