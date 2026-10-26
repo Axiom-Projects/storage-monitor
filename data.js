@@ -99,14 +99,14 @@ const SITES = {
                 "discountPct": 50,
                 "maxWeeks": 4,
                 "firstSeen": "2026-10-12",
-                "lastSeen": "2026-10-25"
+                "lastSeen": "2026-10-26"
             },
             "access": {
                 "active": true,
-                "text": "50% off your first 13 weeks",
+                "text": "50% off up to 13 weeks storage",
                 "discountPct": 50,
                 "maxWeeks": 13,
-                "firstSeen": "2026-10-26",
+                "firstSeen": "2026-01-15",
                 "lastSeen": "2026-10-26"
             },
             "urban": {
@@ -115,14 +115,14 @@ const SITES = {
                 "discountPct": 50,
                 "maxWeeks": 0,
                 "firstSeen": "2026-03-14",
-                "lastSeen": "2026-10-25"
+                "lastSeen": "2026-10-26"
             },
             "safestore": {
                 "active": true,
-                "text": "50% off for the first 8 weeks",
+                "text": "50% Off 8 Weeks",
                 "discountPct": 50,
                 "maxWeeks": 8,
-                "firstSeen": "2026-10-26",
+                "firstSeen": "2026-06-27",
                 "lastSeen": "2026-10-26"
             },
             "bigyellow": {
@@ -11402,7 +11402,7 @@ const SITES = {
                 "provider": "access",
                 "text": "50% off up to 13 weeks storage",
                 "firstSeen": "2026-01-15",
-                "lastSeen": "2026-10-25",
+                "lastSeen": "2026-10-26",
                 "active": true
             },
             {
@@ -11465,7 +11465,7 @@ const SITES = {
                 "provider": "urban",
                 "text": "50% off your first two months",
                 "firstSeen": "2026-03-14",
-                "lastSeen": "2026-10-25",
+                "lastSeen": "2026-10-26",
                 "active": true
             },
             {
@@ -11521,7 +11521,7 @@ const SITES = {
                 "provider": "safestore",
                 "text": "50% Off 8 Weeks",
                 "firstSeen": "2026-06-27",
-                "lastSeen": "2026-10-25",
+                "lastSeen": "2026-10-26",
                 "active": true
             },
             {
@@ -11591,7 +11591,7 @@ const SITES = {
                 "provider": "metro",
                 "text": "50% off up to 4 weeks",
                 "firstSeen": "2026-10-12",
-                "lastSeen": "2026-10-25",
+                "lastSeen": "2026-10-26",
                 "active": true
             },
             {
@@ -11624,10 +11624,10 @@ const SITES = {
                 "message": "Internal price sheet"
             },
             "access": {
-                "status": "ok",
+                "status": "partial",
                 "lastSuccess": "2026-10-26",
                 "pricesFound": 5,
-                "message": "Weekly real-Chrome check (5/5 sizes)"
+                "message": "Using cached prices - no new data today"
             },
             "urban": {
                 "status": "partial",
@@ -11636,16 +11636,16 @@ const SITES = {
                 "message": "Using cached prices - no new data today"
             },
             "safestore": {
-                "status": "ok",
+                "status": "partial",
                 "lastSuccess": "2026-10-26",
                 "pricesFound": 5,
-                "message": "Weekly real-Chrome check (5/5 sizes)"
+                "message": "Using cached prices - no new data today"
             },
             "bigyellow": {
-                "status": "ok",
+                "status": "partial",
                 "lastSuccess": "2026-10-26",
                 "pricesFound": 5,
-                "message": "Weekly real-Chrome check (5/5 sizes)"
+                "message": "Using cached prices - no new data today"
             }
         },
         "insurance": {
@@ -12584,7 +12584,7 @@ loadSite(DEFAULT_SITE);
 
 // Metadata
 const DATA_META = {
-    "lastScraped": "2026-10-25T12:25:24.637Z",
+    "lastScraped": "2026-10-26T14:10:26.110Z",
     "scraperVersion": "5.0.0",
     "location": "Multi-site (Islington, Bayswater, Victoria/Pimlico)",
     "note": "Multi-site. Scraper rebuilds Islington's scraped blocks; per-site INSURANCE/ADMIN_FEES + non-Islington sites are manually maintained and preserved."
