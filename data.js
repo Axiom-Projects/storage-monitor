@@ -61,11 +61,11 @@ const SITES = {
                 "150": 188.75
             },
             "access": {
-                "25": 57.23,
-                "50": 80.08,
-                "75": 119.31,
-                "100": 136.15,
-                "150": 230.08
+                "25": 50.77,
+                "50": 78.23,
+                "75": 112.85,
+                "100": 132,
+                "150": 249.46
             },
             "urban": {
                 "10": 25.73,
@@ -86,8 +86,8 @@ const SITES = {
             },
             "bigyellow": {
                 "25": 39.3,
-                "50": 66,
-                "75": 95.7,
+                "50": 74.4,
+                "75": 83.7,
                 "100": 105.9,
                 "150": 198
             }
@@ -103,11 +103,11 @@ const SITES = {
             },
             "access": {
                 "active": true,
-                "text": "50% off up to 8 weeks storage",
+                "text": "50% off your first 8 weeks",
                 "discountPct": 50,
                 "maxWeeks": 8,
-                "firstSeen": "2026-04-02",
-                "lastSeen": "2026-11-01"
+                "firstSeen": "2026-10-12",
+                "lastSeen": "2026-11-02"
             },
             "urban": {
                 "active": true,
@@ -127,11 +127,11 @@ const SITES = {
             },
             "bigyellow": {
                 "active": true,
-                "text": "HALF PRICE OPENING OFFER, first 8 weeks (includes 20% discount)",
-                "discountPct": 20,
+                "text": "Half price opening offer, first 8 weeks",
+                "discountPct": 0,
                 "maxWeeks": 8,
-                "firstSeen": "2026-10-26",
-                "lastSeen": "2026-10-26"
+                "firstSeen": "2026-11-02",
+                "lastSeen": "2026-11-02"
             }
         },
         "priceHistory": [
@@ -10461,6 +10461,49 @@ const SITES = {
                         "150": 198
                     }
                 }
+            },
+            {
+                "date": "2026-11-02",
+                "prices": {
+                    "metro": {
+                        "25": 46.75,
+                        "50": 78.5,
+                        "75": 101.25,
+                        "100": 123.75,
+                        "150": 188.75
+                    },
+                    "access": {
+                        "25": 50.77,
+                        "50": 78.23,
+                        "75": 112.85,
+                        "100": 132,
+                        "150": 249.46
+                    },
+                    "urban": {
+                        "10": 25.73,
+                        "25": 49.24,
+                        "35": 56.93,
+                        "50": 70.55,
+                        "75": 88.39,
+                        "100": 112.76,
+                        "125": 127.83,
+                        "150": 158
+                    },
+                    "safestore": {
+                        "25": 63.99,
+                        "50": 88.99,
+                        "75": 138.49,
+                        "100": 134.99,
+                        "150": 219.99
+                    },
+                    "bigyellow": {
+                        "25": 39.3,
+                        "50": 74.4,
+                        "75": 83.7,
+                        "100": 105.9,
+                        "150": 198
+                    }
+                }
             }
         ],
         "priceChanges": [
@@ -11646,6 +11689,55 @@ const SITES = {
                 "size": 150,
                 "oldPrice": 222.92,
                 "newPrice": 230.08
+            },
+            {
+                "date": "2026-11-02",
+                "provider": "bigyellow",
+                "size": 50,
+                "oldPrice": 66,
+                "newPrice": 74.4
+            },
+            {
+                "date": "2026-11-02",
+                "provider": "bigyellow",
+                "size": 75,
+                "oldPrice": 95.7,
+                "newPrice": 83.7
+            },
+            {
+                "date": "2026-11-02",
+                "provider": "access",
+                "size": 25,
+                "oldPrice": 57.23,
+                "newPrice": 50.77
+            },
+            {
+                "date": "2026-11-02",
+                "provider": "access",
+                "size": 50,
+                "oldPrice": 80.08,
+                "newPrice": 78.23
+            },
+            {
+                "date": "2026-11-02",
+                "provider": "access",
+                "size": 75,
+                "oldPrice": 119.31,
+                "newPrice": 112.85
+            },
+            {
+                "date": "2026-11-02",
+                "provider": "access",
+                "size": 100,
+                "oldPrice": 136.15,
+                "newPrice": 132
+            },
+            {
+                "date": "2026-11-02",
+                "provider": "access",
+                "size": 150,
+                "oldPrice": 230.08,
+                "newPrice": 249.46
             }
         ],
         "dealsHistory": [
@@ -11842,7 +11934,7 @@ const SITES = {
                 "provider": "access",
                 "text": "50% off your first 8 weeks",
                 "firstSeen": "2026-10-12",
-                "lastSeen": "2026-10-12",
+                "lastSeen": "2026-11-02",
                 "active": true
             },
             {
@@ -11872,6 +11964,13 @@ const SITES = {
                 "firstSeen": "2026-10-26",
                 "lastSeen": "2026-10-26",
                 "active": true
+            },
+            {
+                "provider": "bigyellow",
+                "text": "Half price opening offer, first 8 weeks",
+                "firstSeen": "2026-11-02",
+                "lastSeen": "2026-11-02",
+                "active": true
             }
         ],
         "scrapeStatus": {
@@ -11882,10 +11981,10 @@ const SITES = {
                 "message": "Internal price sheet"
             },
             "access": {
-                "status": "partial",
-                "lastSuccess": "2026-10-26",
+                "status": "ok",
+                "lastSuccess": "2026-11-02",
                 "pricesFound": 5,
-                "message": "Using cached prices - no new data today"
+                "message": "Weekly real-Chrome check (5/5 sizes)"
             },
             "urban": {
                 "status": "partial",
@@ -11900,10 +11999,10 @@ const SITES = {
                 "message": "Using cached prices - no new data today"
             },
             "bigyellow": {
-                "status": "partial",
-                "lastSuccess": "2026-10-26",
+                "status": "ok",
+                "lastSuccess": "2026-11-02",
                 "pricesFound": 5,
-                "message": "Using cached prices - no new data today"
+                "message": "Weekly real-Chrome check (5/5 sizes)"
             }
         },
         "insurance": {
