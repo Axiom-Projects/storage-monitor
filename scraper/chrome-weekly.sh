@@ -65,7 +65,7 @@ log "claude exit $? -> $RAW"
 RESULT="$RUNS/$STAMP.result.json"
 "$NODE" -e '
 const j=JSON.parse(require("fs").readFileSync(process.argv[1],"utf8")); const t=j.result||"";
-const o=JSON.parse(t.slice(t.indexOf("{"))); require("fs").writeFileSync(process.argv[2], JSON.stringify(o,null,1));' \
+const o=JSON.parse(t.slice(t.indexOf("{"), t.lastIndexOf("}")+1)); require("fs").writeFileSync(process.argv[2], JSON.stringify(o,null,1));' \
     "$RAW" "$RESULT" 2>>"$LOG" || {
     notify "⚠️ Storage Monitor ($DATE) — weekly prices FAILED: the Chrome run returned no readable result. See scraper/chrome-weekly.log."
     exit 1; }
